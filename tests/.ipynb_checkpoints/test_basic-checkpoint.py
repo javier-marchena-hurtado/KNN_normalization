@@ -47,7 +47,5 @@ def test_knn_normalize_protein_return():
     rna_data = AnnData(X=np.random.poisson(20, (10, 100)).astype(float))
     mdata = MuData({"prot": prot_data, "rna": rna_data})
 
-    result = knn_normalization.tl.knn_normalize_protein(
-        mdata, calculate_neighbors_from="rna", n_neighbors=3, inplace=False
-    )
+    result = knn_normalization.tl.knn_normalize_protein(mdata, calculate_neighbors_from="rna", n_neighbors=3, inplace=False)
     assert isinstance(result, MuData)

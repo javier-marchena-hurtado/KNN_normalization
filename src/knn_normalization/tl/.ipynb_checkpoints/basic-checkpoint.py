@@ -1,7 +1,6 @@
 from numbers import Integral
 from typing import Literal
 from warnings import warn
-
 import numpy as np
 import scanpy as sc
 from anndata import AnnData

@@ -1,0 +1,42 @@
+{
+  "template": "https://github.com/scverse/cookiecutter-scverse",
+  "commit": "d4bdfc5ec4c5029aebf7c0cba65609e20358144d",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "project_name": "KNN_normalization",
+      "package_name": "knn_normalization",
+      "project_description": "Neighbor-based normalization of CITE-seq data",
+      "author_full_name": "Javier Marchena Hurtado",
+      "author_email": "javier.marchena.hurtado@gmail.com",
+      "github_user": "javier-marchena-hurtado",
+      "github_repo": "KNN_normalization",
+      "license": "MIT License",
+      "ide_integration": true,
+      "_copy_without_render": [
+        ".github/workflows/build.yaml",
+        ".github/workflows/test.yaml",
+        "docs/_templates/autosummary/**.rst"
+      ],
+      "_exclude_on_template_update": [
+        "CHANGELOG.md",
+        "LICENSE",
+        "README.md",
+        "docs/api.md",
+        "docs/index.md",
+        "docs/notebooks/example.ipynb",
+        "docs/references.bib",
+        "docs/references.md",
+        "src/**",
+        "tests/**"
+      ],
+      "_render_devdocs": false,
+      "_jinja2_env_vars": {
+        "lstrip_blocks": true,
+        "trim_blocks": true
+      },
+      "_template": "https://github.com/scverse/cookiecutter-scverse"
+    }
+  },
+  "directory": null
+}

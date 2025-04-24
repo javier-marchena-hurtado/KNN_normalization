@@ -1,1 +1,1 @@
-from .basic import basic_tool
+from .tools import _normalize_with_neighbors, knn_normalize_protein

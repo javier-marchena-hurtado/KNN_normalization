@@ -1,7 +1,7 @@
 import numpy as np
+import pytest
 from anndata import AnnData
 from mudata import MuData
-
 import knn_normalization
 
 
@@ -39,23 +39,17 @@ def test_calculate_neighbors_from_protein(adata):
 
 def test_knn_normalize_protein_anndata(adata):
     """This test tests whether the function knn_normalize_protein works as intended, using an AnnData object as input."""
-    knn_normalization.tl.knn_normalize_protein(
-        adata, calculate_neighbors_from="prot", n_neighbors=3, inplace=True, log_transform=True
-    )
+    knn_normalization.tl.knn_normalize_protein(adata, calculate_neighbors_from="prot", n_neighbors=3, inplace=True, log_transform=True)
     assert isinstance(adata, AnnData)
 
 
 def test_knn_normalize_protein_mudata_rna_neighbors(mdata):
     """This test tests whether the function knn_normalize_protein works as intended, using an MuData object as input and with RNA neighbors."""
-    result = knn_normalization.tl.knn_normalize_protein(
-        mdata, calculate_neighbors_from="rna", n_neighbors=3, inplace=False
-    )
+    result = knn_normalization.tl.knn_normalize_protein(mdata, calculate_neighbors_from="rna", n_neighbors=3, inplace=False)
     assert isinstance(result, MuData)
 
 
 def test_knn_normalize_protein_mudata_protein_neighbors(mdata):
     """This test tests whether the function knn_normalize_protein works as intended, using an MuData object as input and with protein neighbors."""
-    knn_normalization.tl.knn_normalize_protein(
-        mdata, calculate_neighbors_from="prot", n_neighbors=3, inplace=True, log_transform=True
-    )
+    knn_normalization.tl.knn_normalize_protein(mdata, calculate_neighbors_from="prot", n_neighbors=3, inplace=True, log_transform=True)
     assert isinstance(mdata, MuData)

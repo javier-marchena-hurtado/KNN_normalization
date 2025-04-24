@@ -14,7 +14,6 @@ def adata():
 
     return adata
 
-
 @pytest.fixture
 def mdata():
     np.random.seed(0)

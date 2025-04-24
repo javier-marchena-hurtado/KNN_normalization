@@ -1,1 +1,1 @@
-from .basic import basic_preproc, elaborate_example
+from .preprocessing import calculate_neighbors_from_protein, retrieve_neighbors

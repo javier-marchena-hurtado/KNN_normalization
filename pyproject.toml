@@ -3,7 +3,7 @@ build-backend = "hatchling.build"
 requires = [ "hatchling" ]
 
 [project]
-name = "KNN_normalization"
+name = "knn-normalization"
 version = "0.0.1"
 description = "Neighbor-based normalization of CITE-seq data"
 readme = "README.md"
@@ -59,6 +59,15 @@ urls.Source = "https://github.com/javier-marchena-hurtado/KNN_normalization"
 [tool.hatch.envs.default]
 installer = "uv"
 features = [ "dev" ]
+dependencies = [
+  "pydantic",
+  "numpy",
+  "scanpy",
+  "scipy",
+  "mudata",
+  "anndata",
+  "pytest",
+]
 
 [tool.hatch.envs.docs]
 features = [ "doc" ]
@@ -66,24 +75,17 @@ scripts.build = "sphinx-build -M html docs docs/_build {args}"
 scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
 
-# Test the lowest and highest supported Python versions with normal deps
-[[tool.hatch.envs.hatch-test.matrix]]
-deps = [ "stable" ]
-python = [ "3.10", "3.13" ]
-
-# Test the newest supported Python version also with pre-release deps
-[[tool.hatch.envs.hatch-test.matrix]]
-deps = [ "pre" ]
-python = [ "3.13" ]
-
 [tool.hatch.envs.hatch-test]
+python = "3.12"
 features = [ "test" ]
-
-[tool.hatch.envs.hatch-test.overrides]
-# If the matrix variable `deps` is set to "pre",
-# set the environment variable `UV_PRERELEASE` to "allow".
-matrix.deps.env-vars = [
-  { key = "UV_PRERELEASE", value = "allow", if = [ "pre" ] },
+dependencies = [
+  "pydantic",
+  "numpy",
+  "scanpy",
+  "scipy",
+  "mudata",
+  "anndata",
+  "pytest",
 ]
 
 [tool.ruff]

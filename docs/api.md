@@ -9,11 +9,12 @@
 .. autosummary::
     :toctree: generated
 
-    pp.basic_preproc
-    pp.elaborate_example
+    pp.retrieve_neighbors
+    pp.calculate_neighbors_from_protein
 ```
 
 ## Tools
+
 
 ```{eval-rst}
 .. module:: knn_normalization.tl
@@ -22,18 +23,6 @@
 .. autosummary::
     :toctree: generated
 
-    tl.basic_tool
-```
-
-## Plotting
-
-```{eval-rst}
-.. module:: knn_normalization.pl
-.. currentmodule:: knn_normalization
-
-.. autosummary::
-    :toctree: generated
-
-    pl.basic_plot
-    pl.BasicClass
+    tl.knn_normalize_protein
+    tl._normalize_with_neighbors
 ```

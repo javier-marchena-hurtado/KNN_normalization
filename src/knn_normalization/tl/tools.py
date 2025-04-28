@@ -19,7 +19,7 @@ def knn_normalize_protein(
     calculate_neighbors_from: Literal["prot", "rna", "use_existing_neighbors"] = "prot",
     log_transform: bool = True,
     n_neighbors: Integral | None = None,
-    pseudocount: Integral = 10,
+    pseudocount: Integral = 5,
     max_iterations: Integral = 25,
     inplace: bool = True,
     save_size_factors: bool = False,
@@ -35,7 +35,7 @@ def knn_normalize_protein(
     calculate_neighbors_from: Whether to use the ``prot`` or the ``rna`` modality to calculate neighbor cells. If ``use_existing_neighbors``, the neighbors that already exist in the protein data will be used for KNN normalization, that is, the data.obsp['connectivities'] (if the input is an AnnData object) or the data['prot'].obsp['connectivities'] (if the input data is a MuData object). Attention: when using ``prot`` or ``rna`` to calculate neighbor cells, it is assumed that the protein or RNA data is raw. If you want to use an unconventional normalization procedure, it might be a better idea to normalize the data and calculate neighbors before doing KNN normalization, and giving those neighbors as input by using calculate_neighbors_from = 'use_existing_neighbors'.
     n_neighbors: Number of neighbors to use in KNN normalization. If None, the number of neighbors is calculated automatically based on the number of cells in the data.
     log_transform: Whether to log transfrom the protein data or not.
-    pseudocount: Pseudocount to add before log-transform.
+    pseudocount: Pseudocount to add.
     max_iterations: Maximum number of iterations of KNN normalization.
     inplace: Whether to update the AnnData or MuData object inplace.
     save_size_factors: if True, the final size factors are saved to data.obs['size_factor'] (data['prot'].obs['size_factor'] if the input data is a MuData object) and the size factor history (all size factors across iterations) is saved to data.obsm['size_factor_history'] (data['prot'].obsm['size_factor_history'] if the input data is a MuData object).
@@ -150,9 +150,9 @@ def _normalize_with_neighbors(
     protein_anndata,
     neighbors,
     log_transform=True,
-    log_transform_after=False,
+    log_transform_before=False,
     save_size_factors=False,
-    pseudocount=10,
+    pseudocount=5,
     max_iterations=25,
     change_for_stop=0.0005,
     verbose=True,
@@ -166,7 +166,7 @@ def _normalize_with_neighbors(
     neighbors:  Neighbor cells. These neighbors are retrieved with the "retrieve_neighbors" function. The expected format a is dictionary of lists indicating which cells are neighbors.
     log_transform: if True, takes the logarithm of the data.
     save_size_factors: if True, the final size factors are saved to protein_anndata.obs["size_factor"] and the size factor history (all size factors across iterations) is saved to protein_anndata.obsm["size_factor_history"].
-    pseudocount: adds pseudocounts to the data to avoid ZeroDivision errors. This argument also determines the value of the pseudocount (1 by default).
+    pseudocount: adds pseudocounts to the data to avoid ZeroDivision errors. This argument also determines the value of the pseudocount (5 by default).
     max_iteration: maximum number of iterations.
     change_for_stop: the algorithm stops when the change in size factor is smaller than this value (convergence criterion).
     verbose: whether you want to print guidance information when running the function.
@@ -177,8 +177,8 @@ def _normalize_with_neighbors(
     x = protein_anndata.X
     x += pseudocount  # To avoid zero-division, we add a pseudocount.
 
-    assert not (log_transform_after and log_transform), "log_transform and log_transform_after cannot be both True"
-    if log_transform:
+    assert not (log_transform_before and log_transform), "log_transform and log_transform_before cannot be both True"
+    if log_transform_before:
         x = np.log(x)
 
     num_cells = x.shape[0]
@@ -218,7 +218,7 @@ def _normalize_with_neighbors(
             if biggest_size_factor_change < change_for_stop:
                 break
 
-    if log_transform_after:
+    if log_transform:
         x = np.log(x)
 
     if save_size_factors:

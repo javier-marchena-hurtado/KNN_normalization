@@ -174,6 +174,8 @@ def _normalize_with_neighbors(
     if not inplace:
         protein_anndata = protein_anndata.copy()
 
+    # TODO: FUNCTIONS IN CASE THE DATA IS SPARSE.
+
     x = protein_anndata.X
     x += pseudocount  # To avoid zero-division, we add a pseudocount.
 

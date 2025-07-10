@@ -11,18 +11,6 @@ def retrieve_neighbors(neighbors):
     return neighbors
 
 
-# def retrieve_neighbors(data):
-#     """Convert the KNN graph into a dictionary mapping each cell to its neighbor cells."""
-#     connectivity = data.obsp["connectivities"].toarray()
-#     row_indices, col_indices = np.where(connectivity > 0)
-
-#     neighbors = {}
-#     for src, tgt in zip(row_indices, col_indices, strict=False):
-#         neighbors.setdefault(src, []).append(tgt)
-
-#     return neighbors
-
-
 def calculate_neighbors_from_protein(protein_data, n_neighbors, log_transform=True):
     """Calculates neighbors (the KNN graph) from protein data."""
     data_for_neighbors = protein_data.copy()

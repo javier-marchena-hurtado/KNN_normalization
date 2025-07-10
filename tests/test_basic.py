@@ -12,19 +12,14 @@ def test_package_has_version():
 def test_retrieve_neighbors(adata):
     """This test tests whether the function retrieve_neighbors works as intended."""
 
-    neighbor_pairs = np.where(
-        adata.obsp["connectivities"].toarray() > 0
-    )  # A pair of cells are neighbors if their connectivity is higher than 0.
-    assert len(neighbor_pairs) == 2
-
-    neighbors = knn_normalization.pp.retrieve_neighbors(adata)
+    neighbors = knn_normalization.pp.retrieve_neighbors(adata.obsp["connectivities"])
     assert isinstance(neighbors, dict)
     assert len(neighbors) == adata.n_obs
 
 
 def test_normalize_with_neighbors(adata):
     """This test tests whether the function _normalize_with_neighbors works as intended."""
-    neighbors = knn_normalization.pp.retrieve_neighbors(adata)
+    neighbors = knn_normalization.pp.retrieve_neighbors(adata.obsp["connectivities"])
     original_data = adata.X.copy()
     knn_normalization.tl._normalize_with_neighbors(adata, neighbors, log_transform=False, inplace=True)
     assert not np.allclose(adata.X, original_data)  # Data should be changed

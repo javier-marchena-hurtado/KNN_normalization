@@ -25,7 +25,7 @@ def knn_normalize_protein(
     mean: Literal["average", "geom_mean"] = "average",
     inplace: bool = True,
     save_size_factors: bool = False,
-    verbose: bool = True
+    verbose: bool = True,
 ):
     """
     Normalize protein expression with KNN normalization.
@@ -77,7 +77,7 @@ def knn_normalize_protein(
                 verbose=verbose,
                 save_size_factors=save_size_factors,
                 inplace=True,
-                mean=mean
+                mean=mean,
             )
         else:
             knn_normalized_protein = _normalize_with_neighbors(
@@ -89,7 +89,7 @@ def knn_normalize_protein(
                 verbose=verbose,
                 save_size_factors=save_size_factors,
                 inplace=False,
-                mean=mean
+                mean=mean,
             )
             toreturn = knn_normalized_protein
 
@@ -134,7 +134,7 @@ def knn_normalize_protein(
                 verbose=verbose,
                 save_size_factors=save_size_factors,
                 inplace=True,
-                mean=mean
+                mean=mean,
             )
         else:
             knn_normalized_protein = _normalize_with_neighbors(
@@ -146,12 +146,13 @@ def knn_normalize_protein(
                 verbose=verbose,
                 save_size_factors=save_size_factors,
                 inplace=False,
-                mean=mean
+                mean=mean,
             )
             new_mdata = MuData({"rna": data["rna"], "prot": knn_normalized_protein})
             toreturn = new_mdata
 
     return toreturn
+
 
 def _normalize_with_neighbors(
     protein_anndata,
@@ -178,7 +179,7 @@ def _normalize_with_neighbors(
     change_for_stop: the algorithm stops when the change in size factor is smaller than this value (convergence criterion).
     verbose: whether you want to print guidance information when running the function.
     """
-    neighbors = retrieve_neighbors(connectivities) # Converts the format of the KNN graph into a dictionary mapping each cell to its neighbor cells.
+    neighbors = retrieve_neighbors(connectivities)  # Converts the format of the KNN graph into a dictionary mapping each cell to its neighbor cells.
 
     if not inplace:
         protein_anndata = protein_anndata.copy()
@@ -244,6 +245,7 @@ def _normalize_with_neighbors(
     protein_anndata.X = x
 
     return None if inplace else protein_anndata
+
 
 # def _normalize_with_neighbors(
 #     protein_anndata,

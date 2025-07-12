@@ -19,15 +19,16 @@ def test_retrieve_neighbors(adata):
 
 def test_normalize_with_neighbors(adata):
     """This test tests whether the function _normalize_with_neighbors works as intended."""
-    neighbors = knn_normalization.pp.retrieve_neighbors(adata.obsp["connectivities"])
     original_data = adata.X.copy()
+    neighbors = adata.obsp["connectivities"]
     knn_normalization.tl._normalize_with_neighbors(adata, neighbors, log_transform=False, inplace=True)
     assert not np.allclose(adata.X, original_data)  # Data should be changed
 
 
 def test_calculate_neighbors_from_protein(adata):
     """This test tests whether the function calculate_neighbors_from_protein works as intended."""
-    neighbors = knn_normalization.pp.calculate_neighbors_from_protein(adata, n_neighbors=3, log_transform=True)
+    connectivities = knn_normalization.pp.calculate_neighbors_from_protein(adata, n_neighbors=3, log_transform=True)
+    neighbors = knn_normalization.pp.retrieve_neighbors(connectivities)
     assert isinstance(neighbors, dict)
     assert len(neighbors) > 0
 

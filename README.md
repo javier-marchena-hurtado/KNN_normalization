@@ -6,7 +6,7 @@
 [badge-tests]: https://img.shields.io/github/actions/workflow/status/javier-marchena-hurtado/KNN_normalization/test.yaml?branch=main
 [badge-docs]: https://img.shields.io/readthedocs/KNN_normalization
 
-Neighbor-based normalization of CITE-seq data
+Neighbor-based normalization of CITE-seq data.
 
 ## Getting started
 
@@ -15,10 +15,6 @@ in particular, the [API documentation][].
 
 ## Installation
 
-You need to have Python 3.10 or newer installed on your system.
-If you don't have Python installed, we recommend installing [uv][].
-
-There are several alternative options to install KNN_normalization:
 
 <!--
 1) Install the latest release of `KNN_normalization` from [PyPI][]:
@@ -27,8 +23,7 @@ There are several alternative options to install KNN_normalization:
 pip install KNN_normalization
 ```
 -->
-
-1. Install the latest development version:
+ Install the latest development version:
 
 ```bash
 pip install git+https://github.com/javier-marchena-hurtado/KNN_normalization.git@main
@@ -40,7 +35,7 @@ See the [changelog][].
 
 ## Contact
 
-For questions and help requests, you can reach out in the [scverse discourse][].
+For questions and help requests, you can reach out in .
 If you found a bug, please use the [issue tracker][].
 
 ## Citation

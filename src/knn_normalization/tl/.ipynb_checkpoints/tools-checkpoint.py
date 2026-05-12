@@ -22,10 +22,11 @@ def knn_normalize_protein(
     n_neighbors: Integral | None = None,
     pseudocount: Integral = 5,
     max_iterations: Integral = 25,
-    mean: Literal["average", "geom_mean"] = "average",
+    mean: Literal["average", "geom_mean", "trimmed_mean"] = "average",
     inplace: bool = True,
     save_size_factors: bool = False,
     verbose: bool = True,
+    preserve_total_counts=True
 ):
     """
     Normalize protein expression with KNN normalization.
@@ -78,6 +79,7 @@ def knn_normalize_protein(
                 save_size_factors=save_size_factors,
                 inplace=True,
                 mean=mean,
+                preserve_total_counts=preserve_total_counts
             )
         else:
             knn_normalized_protein = _normalize_with_neighbors(
@@ -90,6 +92,7 @@ def knn_normalize_protein(
                 save_size_factors=save_size_factors,
                 inplace=False,
                 mean=mean,
+                preserve_total_counts=preserve_total_counts
             )
             toreturn = knn_normalized_protein
 
@@ -135,6 +138,7 @@ def knn_normalize_protein(
                 save_size_factors=save_size_factors,
                 inplace=True,
                 mean=mean,
+                preserve_total_counts=preserve_total_counts
             )
         else:
             knn_normalized_protein = _normalize_with_neighbors(
@@ -147,6 +151,7 @@ def knn_normalize_protein(
                 save_size_factors=save_size_factors,
                 inplace=False,
                 mean=mean,
+                preserve_total_counts=preserve_total_counts
             )
             new_mdata = MuData({"rna": data["rna"], "prot": knn_normalized_protein})
             toreturn = new_mdata
@@ -166,6 +171,7 @@ def _normalize_with_neighbors(
     verbose=True,
     inplace: bool = True,
     mean="average",
+    preserve_total_counts=True
 ):
     """
     Applies KNN normalization given precomputed neighbors.
@@ -179,7 +185,9 @@ def _normalize_with_neighbors(
     change_for_stop: the algorithm stops when the change in size factor is smaller than this value (convergence criterion).
     verbose: whether you want to print guidance information when running the function.
     """
-    neighbors = retrieve_neighbors(connectivities)  # Converts the format of the KNN graph into a dictionary mapping each cell to its neighbor cells.
+    neighbors = retrieve_neighbors(
+        connectivities
+    )  # Converts the format of the KNN graph into a dictionary mapping each cell to its neighbor cells.
 
     if not inplace:
         protein_anndata = protein_anndata.copy()
@@ -192,6 +200,7 @@ def _normalize_with_neighbors(
     assert not (log_transform_before and log_transform), "log_transform and log_transform_before cannot be both True"
     if log_transform_before:
         x = np.log(x)
+    total_sums_before = x.sum()
 
     num_cells = x.shape[0]
     size_factor_history = []
@@ -199,27 +208,41 @@ def _normalize_with_neighbors(
     # KNN normalization.
     for iteration in range(max_iterations):
         size_factors = np.zeros(num_cells)
+        median_total_counts = np.median(x.sum(axis=1))
 
         for target_cell, neighbor_list in neighbors.items():
             neighbor_indices = np.array(neighbor_list)
             target_indices = np.full(len(neighbor_list), target_cell)
+
+            total_counts_target = x[target_cell].sum()
+            total_counts_neighbors = x[neighbor_indices].sum(axis=1)
+                
             ratios = x[neighbor_indices] / x[target_indices]
             proto_size_factors = np.median(ratios, axis=1)
 
             # After having collected the ratios for between the neighbor cells and the target cell, we calculate the average of those ratios. That will be the cell-specific size factor.
             if mean == "average":
                 size_factor = np.mean(proto_size_factors)
+            elif mean == "trimmed_mean":
+                size_factor = stats.trim_mean(proto_size_factors, 0.1)
             else:
                 size_factor = stats.gmean(proto_size_factors)
+                    
             size_factors[target_cell] = size_factor
 
         # Now, we multiply the protein expression of each cell by its cell-specific factor.
         x *= size_factors[:, None]
 
+        if preserve_total_counts:
+            total_sums_after_iteration = x.sum()
+            ratio_of_total_counts = total_sums_after_iteration/total_sums_before
+            x = x/ratio_of_total_counts
+            size_factors = size_factors/ratio_of_total_counts
+
         # Save this iteration's size factors. This is done mainly to compare with the previous iteration for the stopping criterion.
         size_factor_history.append(size_factors)
         if verbose:
-            print("Iteration ", iteration + 1)
+            print("Iteration ", iteration + 1)       
 
         # Unless it's the first iteration, check the algorithm stopping criterion: if all changes of size_factors are smaller than the "change_for_stop" value with respect to the previous iteration.
 
@@ -229,7 +252,7 @@ def _normalize_with_neighbors(
                 print("Change wrt previous iteration:", biggest_size_factor_change)
             if biggest_size_factor_change < change_for_stop:
                 break
-
+    
     if log_transform:
         x = np.log(x)
 
@@ -245,6 +268,100 @@ def _normalize_with_neighbors(
     protein_anndata.X = x
 
     return None if inplace else protein_anndata
+
+# def _normalize_with_neighbors(
+#     protein_anndata,
+#     connectivities,
+#     log_transform=True,
+#     log_transform_before=False,
+#     save_size_factors=False,
+#     pseudocount=5,
+#     max_iterations=25,
+#     change_for_stop=0.0005,
+#     verbose=True,
+#     inplace: bool = True,
+#     mean="average",
+# ):
+#     """
+#     Applies KNN normalization given precomputed neighbors.
+
+#     protein_data: an AnnData object with the protein data in CITE-seq.
+#     connectivities:  The KNN graph containing neighbor cells. It expects the format from .obsp["connectivities"].
+#     log_transform: if True, takes the logarithm of the data.
+#     save_size_factors: if True, the final size factors are saved to protein_anndata.obs["size_factor"] and the size factor history (all size factors across iterations) is saved to protein_anndata.obsm["size_factor_history"].
+#     pseudocount: adds pseudocounts to the data to avoid ZeroDivision errors. This argument also determines the value of the pseudocount (5 by default).
+#     max_iteration: maximum number of iterations.
+#     change_for_stop: the algorithm stops when the change in size factor is smaller than this value (convergence criterion).
+#     verbose: whether you want to print guidance information when running the function.
+#     """
+#     neighbors = retrieve_neighbors(
+#         connectivities
+#     )  # Converts the format of the KNN graph into a dictionary mapping each cell to its neighbor cells.
+
+#     if not inplace:
+#         protein_anndata = protein_anndata.copy()
+
+#     # TODO: FUNCTIONS IN CASE THE DATA IS SPARSE.
+
+#     x = protein_anndata.X
+#     x += pseudocount  # To avoid zero-division, we add a pseudocount.
+
+#     assert not (log_transform_before and log_transform), "log_transform and log_transform_before cannot be both True"
+#     if log_transform_before:
+#         x = np.log(x)
+
+#     num_cells = x.shape[0]
+#     size_factor_history = []
+
+#     # KNN normalization.
+#     for iteration in range(max_iterations):
+#         size_factors = np.zeros(num_cells)
+
+#         for target_cell, neighbor_list in neighbors.items():
+#             neighbor_indices = np.array(neighbor_list)
+#             target_indices = np.full(len(neighbor_list), target_cell)
+#             ratios = x[neighbor_indices] / x[target_indices]
+#             proto_size_factors = np.median(ratios, axis=1)
+
+#             # After having collected the ratios for between the neighbor cells and the target cell, we calculate the average of those ratios. That will be the cell-specific size factor.
+#             if mean == "average":
+#                 size_factor = np.mean(proto_size_factors)
+#             else:
+#                 size_factor = stats.gmean(proto_size_factors)
+#             size_factors[target_cell] = size_factor
+
+#         # Now, we multiply the protein expression of each cell by its cell-specific factor.
+#         x *= size_factors[:, None]
+
+#         # Save this iteration's size factors. This is done mainly to compare with the previous iteration for the stopping criterion.
+#         size_factor_history.append(size_factors)
+#         if verbose:
+#             print("Iteration ", iteration + 1)
+
+#         # Unless it's the first iteration, check the algorithm stopping criterion: if all changes of size_factors are smaller than the "change_for_stop" value with respect to the previous iteration.
+
+#         if iteration > 0:
+#             biggest_size_factor_change = np.max(np.abs(size_factor_history[-1] - size_factor_history[-2]))
+#             if verbose:
+#                 print("Change wrt previous iteration:", biggest_size_factor_change)
+#             if biggest_size_factor_change < change_for_stop:
+#                 break
+
+#     if log_transform:
+#         x = np.log(x)
+
+#     if save_size_factors:
+#         total_size_factors = np.prod(
+#             np.array(size_factor_history), axis=0
+#         )  # Multiplication of the size factors across all iterations.
+#         protein_anndata.obs["size_factor"] = total_size_factors
+#         size_factor_history = np.array(size_factor_history).T
+#         protein_anndata.obsm["size_factor_history"] = size_factor_history
+#         protein_anndata.obsp["connectivities_KNN_normalization"] = connectivities
+
+#     protein_anndata.X = x
+
+#     return None if inplace else protein_anndata
 
 
 # def _normalize_with_neighbors(

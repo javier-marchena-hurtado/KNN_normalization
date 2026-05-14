@@ -6,7 +6,7 @@
 [badge-tests]: https://img.shields.io/github/actions/workflow/status/javier-marchena-hurtado/KNN_normalization/test.yaml?branch=main
 [badge-docs]: https://img.shields.io/readthedocs/KNN_normalization
 
-<img src="images/KNN_normalization_logo.png" width="400">
+<img src="images/KNN_normalization_logo.png" width="300">
 
 Neighbor-based normalization of CITE-seq data.
 

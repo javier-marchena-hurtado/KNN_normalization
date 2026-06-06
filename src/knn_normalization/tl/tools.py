@@ -14,7 +14,7 @@ from knn_normalization.pp.preprocessing import calculate_neighbors_from_protein,
 mudata.set_options(pull_on_update=False)
 
 
-def knn_normalize_protein(
+def knn_normalize(
     data: AnnData | MuData,
     calculate_neighbors_from: Literal["prot", "rna", "use_existing_neighbors"] = "prot",
     preprocess_rna: bool = True,
@@ -26,7 +26,7 @@ def knn_normalize_protein(
     inplace: bool = True,
     save_size_factors: bool = False,
     verbose: bool = True,
-    preserve_total_counts=True
+    preserve_total_counts=True,
 ):
     """
     Normalize protein expression with KNN normalization.
@@ -79,7 +79,7 @@ def knn_normalize_protein(
                 save_size_factors=save_size_factors,
                 inplace=True,
                 mean=mean,
-                preserve_total_counts=preserve_total_counts
+                preserve_total_counts=preserve_total_counts,
             )
         else:
             knn_normalized_protein = _normalize_with_neighbors(
@@ -92,7 +92,7 @@ def knn_normalize_protein(
                 save_size_factors=save_size_factors,
                 inplace=False,
                 mean=mean,
-                preserve_total_counts=preserve_total_counts
+                preserve_total_counts=preserve_total_counts,
             )
             toreturn = knn_normalized_protein
 
@@ -138,7 +138,7 @@ def knn_normalize_protein(
                 save_size_factors=save_size_factors,
                 inplace=True,
                 mean=mean,
-                preserve_total_counts=preserve_total_counts
+                preserve_total_counts=preserve_total_counts,
             )
         else:
             knn_normalized_protein = _normalize_with_neighbors(
@@ -151,7 +151,7 @@ def knn_normalize_protein(
                 save_size_factors=save_size_factors,
                 inplace=False,
                 mean=mean,
-                preserve_total_counts=preserve_total_counts
+                preserve_total_counts=preserve_total_counts,
             )
             new_mdata = MuData({"rna": data["rna"], "prot": knn_normalized_protein})
             toreturn = new_mdata
@@ -171,7 +171,7 @@ def _normalize_with_neighbors(
     verbose=True,
     inplace: bool = True,
     mean="average",
-    preserve_total_counts=True
+    preserve_total_counts=True,
 ):
     """
     Applies KNN normalization given precomputed neighbors.
@@ -208,15 +208,11 @@ def _normalize_with_neighbors(
     # KNN normalization.
     for iteration in range(max_iterations):
         size_factors = np.zeros(num_cells)
-        median_total_counts = np.median(x.sum(axis=1))
 
         for target_cell, neighbor_list in neighbors.items():
             neighbor_indices = np.array(neighbor_list)
             target_indices = np.full(len(neighbor_list), target_cell)
 
-            total_counts_target = x[target_cell].sum()
-            total_counts_neighbors = x[neighbor_indices].sum(axis=1)
-                
             ratios = x[neighbor_indices] / x[target_indices]
             proto_size_factors = np.median(ratios, axis=1)
 
@@ -227,7 +223,7 @@ def _normalize_with_neighbors(
                 size_factor = stats.trim_mean(proto_size_factors, 0.1)
             else:
                 size_factor = stats.gmean(proto_size_factors)
-                    
+
             size_factors[target_cell] = size_factor
 
         # Now, we multiply the protein expression of each cell by its cell-specific factor.
@@ -235,14 +231,14 @@ def _normalize_with_neighbors(
 
         if preserve_total_counts:
             total_sums_after_iteration = x.sum()
-            ratio_of_total_counts = total_sums_after_iteration/total_sums_before
-            x = x/ratio_of_total_counts
-            size_factors = size_factors/ratio_of_total_counts
+            ratio_of_total_counts = total_sums_after_iteration / total_sums_before
+            x = x / ratio_of_total_counts
+            size_factors = size_factors / ratio_of_total_counts
 
         # Save this iteration's size factors. This is done mainly to compare with the previous iteration for the stopping criterion.
         size_factor_history.append(size_factors)
         if verbose:
-            print("Iteration ", iteration + 1)       
+            print("Iteration ", iteration + 1)
 
         # Unless it's the first iteration, check the algorithm stopping criterion: if all changes of size_factors are smaller than the "change_for_stop" value with respect to the previous iteration.
 
@@ -252,7 +248,7 @@ def _normalize_with_neighbors(
                 print("Change wrt previous iteration:", biggest_size_factor_change)
             if biggest_size_factor_change < change_for_stop:
                 break
-    
+
     if log_transform:
         x = np.log(x)
 
@@ -268,6 +264,7 @@ def _normalize_with_neighbors(
     protein_anndata.X = x
 
     return None if inplace else protein_anndata
+
 
 # def _normalize_with_neighbors(
 #     protein_anndata,

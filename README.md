@@ -8,7 +8,9 @@
 
 <img src="images/KNN_normalization_logo.png" width="250">
 
-Neighbor-based normalization of CITE-seq data.
+## Background and motivation
+
+KNN normalization is a normalization method for protein counts in CITE-seq data. KNN normalization learns from neighbor cells in a KNN graph in order to estimate the appropriate total protein counts in each cell. KNN normalization accurately estimates total protein counts while preserving biological information.
 
 ## Getting started
 

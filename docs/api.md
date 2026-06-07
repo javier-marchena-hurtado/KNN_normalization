@@ -23,6 +23,6 @@
 .. autosummary::
     :toctree: generated
 
-    tl.knn_normalize_protein
+    tl.knn_normalize
     tl._normalize_with_neighbors
 ```

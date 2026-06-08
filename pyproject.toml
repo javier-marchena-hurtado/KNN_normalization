@@ -21,6 +21,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
   "anndata",
@@ -60,45 +61,39 @@ urls.Documentation = "https://KNN_normalization.readthedocs.io/"
 urls.Homepage = "https://github.com/javier-marchena-hurtado/KNN_normalization"
 urls.Source = "https://github.com/javier-marchena-hurtado/KNN_normalization"
 
-[tool.hatch.envs.default]
-installer = "uv"
-features = [ "dev" ]
-dependencies = [
-  "pydantic",
+[tool.hatch]
+envs.default.installer = "uv"
+envs.default.features = [ "dev" ]
+envs.default.dependencies = [
+  "anndata",
+  "mudata",
   "numpy",
+  "pydantic",
+  "pytest",
   "scanpy",
   "scipy",
-  "mudata",
-  "anndata",
-  "pytest",
 ]
-
-[tool.hatch.envs.docs]
-features = [ "doc" ]
-scripts.build = "sphinx-build -M html docs docs/_build {args}"
-scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
-scripts.clean = "git clean -fdX -- {args:docs}"
-
-[tool.hatch.envs.hatch-test]
-python = "3.12"
-features = [ "test" ]
-dependencies = [
-  "pydantic",
+envs.docs.features = [ "doc" ]
+envs.docs.scripts.build = "sphinx-build -M html docs docs/_build {args}"
+envs.docs.scripts.clean = "git clean -fdX -- {args:docs}"
+envs.docs.scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
+envs.hatch-test.python = "3.12"
+envs.hatch-test.features = [ "test" ]
+envs.hatch-test.dependencies = [
+  "anndata",
+  "mudata",
   "numpy",
+  "pydantic",
+  "pytest",
   "scanpy",
   "scipy",
-  "mudata",
-  "anndata",
-  "pytest",
 ]
 
 [tool.ruff]
 line-length = 120
 src = [ "src" ]
 extend-include = [ "*.ipynb" ]
-
 format.docstring-code-format = true
-
 lint.select = [
   "B",      # flake8-bugbear
   "BLE",    # flake8-blind-except
@@ -132,18 +127,18 @@ lint.per-file-ignores."docs/*" = [ "I" ]
 lint.per-file-ignores."tests/*" = [ "D" ]
 lint.pydocstyle.convention = "numpy"
 
-[tool.pytest.ini_options]
-testpaths = [ "tests" ]
-xfail_strict = true
-addopts = [
+[tool.pytest]
+ini_options.testpaths = [ "tests" ]
+ini_options.addopts = [
   "--import-mode=importlib", # allow using test files with same name
 ]
+ini_options.xfail_strict = true
 
-[tool.coverage.run]
-source = [ "knn_normalization" ]
-omit = [
+[tool.coverage]
+run.omit = [
   "**/test_*.py",
 ]
+run.source = [ "knn_normalization" ]
 
 [tool.cruft]
 skip = [

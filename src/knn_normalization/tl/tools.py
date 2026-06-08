@@ -31,20 +31,45 @@ def knn_normalize(
     """
     Normalize protein expression with KNN normalization.
 
-    Normalized data will be written to ``data`` (if it is an AnnData object) or ``data.mod['prot']``(if it is a MuData object) as an X matrix or as a new layer named ``knn_normalized``.
+    Parameters
+    ----------
+    data
+        AnnData object with protein expression counts or MuData object with
+        ``prot`` and ``rna`` modalities.
+    calculate_neighbors_from
+        Whether to use the ``prot`` or the ``rna`` modality to calculate neighbor
+        cells. If ``use_existing_neighbors``, the neighbors already present in the
+        protein data will be used.
+    preprocess_rna
+        If using RNA to calculate neighbors, whether to preprocess the RNA data
+        with library size normalization and log-transformation first.
+    n_neighbors
+        Number of neighbors. If ``None``, calculated automatically as
+        ``max(15, min(round(n_cells / 20), 300))``.
+    log_transform
+        Whether to log-transform the protein data.
+    pseudocount
+        Pseudocount to add before normalization to avoid zero-division errors.
+    max_iterations
+        Maximum number of iterations.
+    mean
+        Type of mean to use: ``'average'``, ``'geom_mean'``, or ``'trimmed_mean'``.
+    inplace
+        Whether to update the object in place or return a copy.
+    save_size_factors
+        If ``True``, saves the final size factors to ``data.obs['size_factor']``
+        and the size factor history to ``data.obsm['size_factor_history']``.
+    verbose
+        Whether to print progress messages.
+    preserve_total_counts
+        Whether to preserve total counts across iterations.
 
-    Args:
-    data: AnnData object with prote expression counts or MuData object with ``prot`` and ``rna`` modalities. If ``calculate_neighbors_from`` is ``rna``, ``data`` must be a MuData object with ``prot`` and ``rna`` modalities.
-    calculate_neighbors_from: Whether to use the ``prot`` or the ``rna`` modality to calculate neighbor cells. If ``use_existing_neighbors``, the neighbors that already exist in the protein data will be used for KNN normalization, that is, the data.obsp['connectivities'] (if the input is an AnnData object) or the data['prot'].obsp['connectivities'] (if the input data is a MuData object). Attention: when using ``prot`` or ``rna`` to calculate neighbor cells, it is assumed that the protein or RNA data is raw. If you want to use an unconventional normalization procedure, it might be a better idea to normalize the data and calculate neighbors before doing KNN normalization, and giving those neighbors as input by using calculate_neighbors_from = 'use_existing_neighbors'.
-    preprocess_rna: If using RNA to calculate neighbors, whether to preprocess the RNA data with library size normalization and log-transformation, or use the RNA data as it is to calculate neighbors.
-    n_neighbors: Number of neighbors to use in KNN normalization. If None, the number of neighbors is calculated automatically based on the number of cells in the data.
-    log_transform: Whether to log transfrom the protein data or not.
-    pseudocount: Pseudocount to add.
-    max_iterations: Maximum number of iterations of KNN normalization.
-    mean: type of mean to use, either average or geometric mean.
-    inplace: Whether to update the AnnData or MuData object inplace.
-    save_size_factors: if True, the final size factors are saved to data.obs['size_factor'] (data['prot'].obs['size_factor'] if the input data is a MuData object) and the size factor history (all size factors across iterations) is saved to data.obsm['size_factor_history'] (data['prot'].obsm['size_factor_history'] if the input data is a MuData object).
-    verbose: Whether to print progress messages during KNN normalization.
+    Returns
+    -------
+    Normalized data will be written to ``data`` (if it is an AnnData object) or
+    ``data.mod['prot']`` (if it is a MuData object) as an X matrix. If inplace is False,
+    returns a new AnnData object (if input is AnnData) or a new MuData object (if input is MuData)
+    with the normalized data.
     """
     toreturn = None
 
@@ -174,16 +199,45 @@ def _normalize_with_neighbors(
     preserve_total_counts=True,
 ):
     """
-    Applies KNN normalization given precomputed neighbors.
+    Apply KNN normalization given precomputed neighbors.
 
-    protein_data: an AnnData object with the protein data in CITE-seq.
-    connectivities:  The KNN graph containing neighbor cells. It expects the format from .obsp["connectivities"].
-    log_transform: if True, takes the logarithm of the data.
-    save_size_factors: if True, the final size factors are saved to protein_anndata.obs["size_factor"] and the size factor history (all size factors across iterations) is saved to protein_anndata.obsm["size_factor_history"].
-    pseudocount: adds pseudocounts to the data to avoid ZeroDivision errors. This argument also determines the value of the pseudocount (5 by default).
-    max_iteration: maximum number of iterations.
-    change_for_stop: the algorithm stops when the change in size factor is smaller than this value (convergence criterion).
-    verbose: whether you want to print guidance information when running the function.
+    Parameters
+    ----------
+    protein_anndata
+        AnnData object with protein expression data.
+    connectivities
+        KNN graph containing neighbor cells, in the format of
+        ``.obsp["connectivities"]``.
+    log_transform
+        If ``True``, log-transforms the data after normalization.
+    log_transform_before
+        If ``True``, log-transforms the data before normalization.
+        Cannot be ``True`` at the same time as ``log_transform``.
+    save_size_factors
+        If ``True``, saves the final size factors to
+        ``protein_anndata.obs["size_factor"]`` and the size factor history
+        to ``protein_anndata.obsm["size_factor_history"]``.
+    pseudocount
+        Pseudocount added to avoid zero-division errors.
+    max_iterations
+        Maximum number of iterations.
+    change_for_stop
+        Convergence criterion. The algorithm stops when the change in size
+        factor between iterations is smaller than this value.
+    verbose
+        Whether to print progress messages.
+    inplace
+        Whether to update the AnnData object in place or return a copy.
+    mean
+        Type of mean to use: ``'average'``, ``'geom_mean'``, or
+        ``'trimmed_mean'``.
+    preserve_total_counts
+        Whether to preserve total counts across iterations.
+
+    Returns
+    -------
+        Normalized data will be written to ``protein_anndata.X``. If inplace is False,
+        returns a new AnnData object with the normalized data.
     """
     neighbors = retrieve_neighbors(
         connectivities

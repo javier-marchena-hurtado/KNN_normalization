@@ -1,6 +1,6 @@
 # API
 
-## Preprocessing
+<!-- ## Preprocessing
 
 ```{eval-rst}
 .. module:: knn_normalization.pp
@@ -11,7 +11,7 @@
 
     pp.retrieve_neighbors
     pp.calculate_neighbors_from_protein
-```
+``` -->
 
 ## Tools
 
@@ -24,5 +24,4 @@
     :toctree: generated
 
     tl.knn_normalize
-    tl._normalize_with_neighbors
 ```

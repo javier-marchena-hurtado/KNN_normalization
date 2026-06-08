@@ -41,7 +41,7 @@ def calculate_neighbors_from_protein(protein_data, n_neighbors, log_transform=Tr
 
     Returns
     -------
-    :class:`scipy.sparse.csr_matrix` with the KNN graph.
+    The KNN graph in scipy.sparse.csr_matrix format.
     """
     data_for_neighbors = protein_data.copy()
     if log_transform:

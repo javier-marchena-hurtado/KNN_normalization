@@ -1,4 +1,4 @@
-# KNN_normalization
+# KNN normalization
 
 [![Tests][badge-tests]][tests]
 [![Documentation][badge-docs]][documentation]

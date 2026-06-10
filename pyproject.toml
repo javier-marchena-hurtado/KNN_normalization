@@ -57,7 +57,7 @@ optional-dependencies.test = [
   "pytest",
 ]
 # https://docs.pypi.org/project_metadata/#project-urls
-urls.Documentation = "https://KNN_normalization.readthedocs.io/"
+urls.Documentation = "https://KNN-normalization.readthedocs.io/"
 urls.Homepage = "https://github.com/javier-marchena-hurtado/KNN_normalization"
 urls.Source = "https://github.com/javier-marchena-hurtado/KNN_normalization"
 

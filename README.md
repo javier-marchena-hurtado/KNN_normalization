@@ -46,11 +46,9 @@ If you found a bug, please use the [issue tracker][].
 
 > t.b.a
 
-[uv]: https://github.com/astral-sh/uv
-[scverse discourse]: https://discourse.scverse.org/
 [issue tracker]: https://github.com/javier-marchena-hurtado/KNN_normalization/issues
 [tests]: https://github.com/javier-marchena-hurtado/KNN_normalization/actions/workflows/test.yaml
 [documentation]: https://knn-normalization.readthedocs.io
-[changelog]: https://KNN_normalization.readthedocs.io/en/latest/changelog.html
+[changelog]: https://knn-normalization.readthedocs.io/en/latest/changelog.html
 [api documentation]: https://knn-normalization.readthedocs.io/en/latest/api.html
 [pypi]: https://pypi.org/project/KNN_normalization

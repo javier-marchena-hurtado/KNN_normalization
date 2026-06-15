@@ -39,7 +39,7 @@ See the [changelog][].
 
 ## Contact
 
-For questions and help requests, you can reach out in .
+For questions and help requests, please open a [dicussion][] on GitHub.
 If you found a bug, please use the [issue tracker][].
 
 ## Citation
@@ -52,3 +52,4 @@ If you found a bug, please use the [issue tracker][].
 [changelog]: https://knn-normalization.readthedocs.io/en/latest/changelog.html
 [api documentation]: https://knn-normalization.readthedocs.io/en/latest/api.html
 [pypi]: https://pypi.org/project/KNN_normalization
+[discussion]: https://github.com/javier-marchena-hurtado/KNN_normalization/discussions

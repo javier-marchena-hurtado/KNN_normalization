@@ -33,6 +33,7 @@ dependencies = [
   "session-info2",
 ]
 optional-dependencies.dev = [
+  "build",
   "pre-commit",
   "twine>=4.0.2",
 ]

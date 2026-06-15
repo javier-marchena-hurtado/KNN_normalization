@@ -39,7 +39,7 @@ See the [changelog][].
 
 ## Contact
 
-For questions and help requests, please open a [dicussion][] on GitHub.
+For questions and help requests, please open a [discussion][] on GitHub.
 If you found a bug, please use the [issue tracker][].
 
 ## Citation

@@ -9,10 +9,10 @@ description = "Neighbor-based normalization of CITE-seq data"
 readme = "README.md"
 license = { file = "LICENSE" }
 maintainers = [
-  { name = "Javier Marchena Hurtado", email = "javier.marchena.hurtado@gmail.com" },
+  { name = "Javier Marchena-Hurtado", email = "javier.marchena.hurtado@gmail.com" },
 ]
 authors = [
-  { name = "Javier Marchena Hurtado" },
+  { name = "Javier Marchena-Hurtado" },
 ]
 requires-python = ">=3.10"
 classifiers = [

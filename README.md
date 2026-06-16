@@ -15,22 +15,35 @@ KNN normalization is a normalization method for protein counts in CITE-seq data.
 ## Getting started
 
 Please refer to the [documentation][],
-in particular, the [API documentation][].
+in particular, the [documentation of the knn_normalize() function][].
 
 ## Installation
 
 
-<!--
+
 1) Install the latest release of `KNN_normalization` from [PyPI][]:
 
 ```bash
 pip install KNN_normalization
 ```
--->
+
  Install the latest development version:
 
 ```bash
 pip install git+https://github.com/javier-marchena-hurtado/KNN_normalization.git@main
+```
+
+## Basic usage
+
+```python
+import scanpy as sc
+import knn_normalization as knn
+
+# Load your CITE-seq data
+adata = sc.read_h5ad("path/to/your/data.h5ad")
+
+# Run KNN normalization (modifies adata in place)
+knn.tl.knn_normalize(adata)
 ```
 
 ## Release notes
@@ -50,6 +63,6 @@ If you found a bug, please use the [issue tracker][].
 [tests]: https://github.com/javier-marchena-hurtado/KNN_normalization/actions/workflows/test.yaml
 [documentation]: https://knn-normalization.readthedocs.io
 [changelog]: https://knn-normalization.readthedocs.io/en/latest/changelog.html
-[api documentation]: https://knn-normalization.readthedocs.io/en/latest/api.html
+[documentation of the knn_normalize() function]: https://knn-normalization.readthedocs.io/en/latest/generated/knn_normalization.tl.knn_normalize.html#knn_normalization.tl.knn_normalize
 [pypi]: https://pypi.org/project/KNN_normalization
 [discussion]: https://github.com/javier-marchena-hurtado/KNN_normalization/discussions

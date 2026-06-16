@@ -19,19 +19,20 @@ in particular, the [documentation of the knn_normalize() function][].
 
 ## Installation
 
-
-
-1) Install the latest release of `KNN_normalization` from [PyPI][]:
+Install the latest release of `KNN_normalization` from [PyPI][]:
 
 ```bash
 pip install KNN_normalization
 ```
 
- Install the latest development version:
+<details>
+<summary>Install the latest development version</summary>
 
 ```bash
 pip install git+https://github.com/javier-marchena-hurtado/KNN_normalization.git@main
 ```
+
+</details>
 
 ## Basic usage
 

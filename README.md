@@ -10,12 +10,7 @@
 
 ## Background and motivation
 
-KNN normalization is a normalization method for protein counts in CITE-seq data. KNN normalization learns from neighbor cells in a KNN graph in order to estimate the appropriate total protein counts in each cell. KNN normalization accurately estimates total protein counts while preserving biological information.
-
-## Getting started
-
-Please refer to the [documentation][],
-in particular, the [documentation of the knn_normalize() function][].
+KNN normalization is a normalization method for protein counts in CITE-seq data. KNN normalization learns from neighbor cells in a KNN graph in order to estimate the appropriate total protein counts in each cell, accurately estimating total protein counts while preserving biological information.
 
 ## Installation
 
@@ -24,15 +19,6 @@ Install the latest release of `KNN_normalization` from [PyPI][]:
 ```bash
 pip install KNN_normalization
 ```
-
-<details>
-<summary>Install the latest development version</summary>
-
-```bash
-pip install git+https://github.com/javier-marchena-hurtado/KNN_normalization.git@main
-```
-
-</details>
 
 ## Basic usage
 
@@ -45,6 +31,19 @@ adata = sc.read_h5ad("path/to/your/data.h5ad")
 
 # Run KNN normalization (modifies adata in place)
 knn.tl.knn_normalize(adata)
+```
+
+## Documentation
+
+Please refer to the [documentation][],
+in particular, the [documentation of the knn_normalize() function][].
+
+## Installing the Development Version (optional)
+
+If you need the latest unreleased features or bug fixes:
+
+```bash
+pip install git+https://github.com/javier-marchena-hurtado/KNN_normalization.git@main
 ```
 
 ## Release notes

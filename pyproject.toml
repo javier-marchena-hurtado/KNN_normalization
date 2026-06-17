@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "knn-normalization"
-version = "0.1.0"
+version = "0.1.1"
 description = "Neighbor-based normalization of CITE-seq data"
 readme = "README.md"
 license = { file = "LICENSE" }

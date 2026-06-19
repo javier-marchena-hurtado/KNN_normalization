@@ -52,7 +52,7 @@ See the [changelog][].
 
 ## Contact
 
-For questions and help requests, please open a [discussion][] on GitHub.
+Contributions, questions and issues are very welcome! For questions, help requests and contributions, please open a [discussion][] on GitHub.
 If you found a bug, please use the [issue tracker][].
 
 ## Citation

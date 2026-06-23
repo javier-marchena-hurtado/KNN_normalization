@@ -24,11 +24,11 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-  "anndata",
+  "anndata>=0.10",
   "mudata",
-  "numpy",
-  "scanpy",
-  "scipy",
+  "numpy>=1.24",
+  "scanpy>=1.10",
+  "scipy>=1.10",
   # for debug logging (referenced from the issue template),
   "session-info2",
 ]

@@ -23,7 +23,7 @@ def retrieve_neighbors(neighbors):
     return neighbors
 
 
-def calculate_neighbors_from_protein(protein_data, n_neighbors, log_transform=True):
+def calculate_neighbors_from_protein(protein_data, n_neighbors, log_transform=True, verbose=True):
     """
     Calculate the KNN graph from protein expression data.
 
@@ -43,6 +43,9 @@ def calculate_neighbors_from_protein(protein_data, n_neighbors, log_transform=Tr
     -------
     The KNN graph in scipy.sparse.csr_matrix format.
     """
+    if verbose:
+        print("Calculating KNN graph.")
+
     data_for_neighbors = protein_data.copy()
     if log_transform:
         sc.pp.log1p(data_for_neighbors)

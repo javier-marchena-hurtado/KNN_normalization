@@ -79,7 +79,7 @@ def knn_normalize(
 
     if isinstance(data, AnnData):
         if ("log1p" in data.uns) and log_transform:
-            warn("The protein data might already be log-transformed.", stacklevel=2)
+            warn("The protein data might already be log-transformed, consider using log_transform=False", stacklevel=2)
 
         if n_neighbors is None:
             n_cells = data.n_obs
@@ -127,7 +127,7 @@ def knn_normalize(
         )
 
         if ("log1p" in data["prot"].uns) and log_transform:
-            warn("The protein data might already be log-transformed.", stacklevel=2)
+            warn("The protein data might already be log-transformed, consider using log_transform=False.", stacklevel=2)
 
         if n_neighbors is None:
             n_cells = data.n_obs
@@ -141,6 +141,8 @@ def knn_normalize(
             assert "rna" in data.mod, (
                 "The MuData object does not have a modality called ``rna``, please add a modality called ``rna`` in order to calculate neighbors from the RNA data."
             )
+            if verbose:
+                print("Calculating KNN graph from RNA data.")
             data_for_neighbors = data["rna"].copy()
             if preprocess_rna:
                 sc.pp.normalize_total(data_for_neighbors)
@@ -258,6 +260,9 @@ def _normalize_with_neighbors(
 
     num_cells = x.shape[0]
     size_factor_history = []
+
+    if verbose:
+        print("Running KNN normalization")
 
     # KNN normalization.
     for iteration in range(max_iterations):

@@ -52,7 +52,7 @@ See the [changelog][].
 
 ## Contact
 
-Contributions, questions and issues are very welcome! For questions, help requests and contributions, please open a [discussion][] on GitHub.
+Contributions, questions and issues are very welcome! For questions, help requests and contributions, please open a [discussion][] on GitHub or send an [email][].
 If you found a bug, please use the [issue tracker][].
 
 ## Citation
@@ -66,3 +66,4 @@ If you found a bug, please use the [issue tracker][].
 [documentation of the knn_normalize() function]: https://knn-normalization.readthedocs.io/en/latest/generated/knn_normalization.tl.knn_normalize.html#knn_normalization.tl.knn_normalize
 [pypi]: https://pypi.org/project/KNN_normalization
 [discussion]: https://github.com/javier-marchena-hurtado/KNN_normalization/discussions
+[email]: mailto:javier.marchena.hurtado@gmail.com

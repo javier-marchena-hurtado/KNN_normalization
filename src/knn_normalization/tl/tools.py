@@ -11,7 +11,10 @@ from scipy import stats
 
 from knn_normalization.pp.preprocessing import calculate_neighbors_from_protein, retrieve_neighbors
 
-mudata.set_options(pull_on_update=False)
+if hasattr(mudata, "settings"):
+    mudata.settings.pull_on_update = False
+else:
+    mudata.set_options(pull_on_update=False)
 
 
 def knn_normalize(

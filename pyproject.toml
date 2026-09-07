@@ -136,10 +136,10 @@ ini_options.addopts = [
 ini_options.xfail_strict = true
 
 [tool.coverage]
+run.source = [ "knn_normalization" ]
 run.omit = [
   "**/test_*.py",
 ]
-run.source = [ "knn_normalization" ]
 
 [tool.cruft]
 skip = [

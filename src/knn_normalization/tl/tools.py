@@ -145,7 +145,7 @@ def knn_normalize(
                 "The MuData object does not have a modality called ``rna``, please add a modality called ``rna`` in order to calculate neighbors from the RNA data."
             )
             if verbose:
-                print("Calculating KNN graph from RNA data.")
+                print("Calculating KNN graph from RNA data")
             data_for_neighbors = data["rna"].copy()
             if preprocess_rna:
                 sc.pp.normalize_total(data_for_neighbors)

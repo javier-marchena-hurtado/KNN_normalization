@@ -4,17 +4,22 @@ from warnings import warn
 
 import mudata
 import numpy as np
-import scanpy as sc
 from anndata import AnnData
 from mudata import MuData
-from scipy import stats
+from scipy.sparse import csr_matrix
 
-from knn_normalization.pp.preprocessing import calculate_neighbors_from_protein, retrieve_neighbors
+from knn_normalization.pp.preprocessing import (
+    calculate_neighbors_from_protein,
+    calculate_neighbors_from_rna,
+    retrieve_neighbors,
+)
 
 if hasattr(mudata, "settings"):
     mudata.settings.pull_on_update = False
 else:
     mudata.set_options(pull_on_update=False)
+
+_NEIGHBOR_SOURCES = ("prot", "rna", "use_existing_neighbors")
 
 
 def knn_normalize(
@@ -25,11 +30,9 @@ def knn_normalize(
     n_neighbors: Integral | None = None,
     pseudocount: Integral = 5,
     max_iterations: Integral = 25,
-    mean: Literal["average", "geom_mean", "trimmed_mean"] = "average",
     inplace: bool = True,
     save_size_factors: bool = False,
     verbose: bool = True,
-    preserve_total_counts=True,
 ):
     """
     Normalize protein expression with KNN normalization.
@@ -55,8 +58,6 @@ def knn_normalize(
         Pseudocount to add before normalization to avoid zero-division errors.
     max_iterations
         Maximum number of iterations.
-    mean
-        Type of mean to use: ``'average'``, ``'geom_mean'``, or ``'trimmed_mean'``.
     inplace
         Whether to update the object in place or return a copy.
     save_size_factors
@@ -64,8 +65,6 @@ def knn_normalize(
         and the size factor history to ``data.obsm['size_factor_history']``.
     verbose
         Whether to print progress messages.
-    preserve_total_counts
-        Whether to preserve total counts across iterations.
 
     Returns
     -------
@@ -74,134 +73,84 @@ def knn_normalize(
     returns a new AnnData object (if input is AnnData) or a new MuData object (if input is MuData)
     with the normalized data.
     """
-    toreturn = None
+    if calculate_neighbors_from not in _NEIGHBOR_SOURCES:
+        raise ValueError(f"calculate_neighbors_from must be one of {_NEIGHBOR_SOURCES}.")
+    if isinstance(data, AnnData) and calculate_neighbors_from == "rna":
+        raise ValueError("calculate_neighbors_from='rna' requires a MuData object with 'prot' and 'rna'.")
+    if "rna" not in data.mod and calculate_neighbors_from == "rna":
+        raise ValueError("The option calculate_neighbors_from == 'rna' requires a modality called 'rna'.")
 
-    assert calculate_neighbors_from in ["prot", "rna", "use_existing_neighbors"], (
-        "the argument calculate_neighbors_from must be prot, rna or use_existing_neighbors."
+    protein = _get_protein_adata(data)
+    if ("log1p" in protein.uns) and log_transform:
+        warn("The protein data might already be log-transformed, consider using log_transform=False", stacklevel=2)
+    if n_neighbors is None:
+        n_neighbors = _default_n_neighbors(data.n_obs)
+    neighbors = _get_neighbors(
+        data,
+        protein,
+        calculate_neighbors_from,
+        n_neighbors,
+        preprocess_rna=preprocess_rna,
+        log_transform=log_transform,
+        verbose=verbose,
     )
+    result = _normalize_with_neighbors(
+        protein,
+        neighbors,
+        log_transform=log_transform,
+        pseudocount=pseudocount,
+        max_iterations=max_iterations,
+        verbose=verbose,
+        save_size_factors=save_size_factors,
+        inplace=inplace,
+    )
+    if inplace:
+        return None
+    if isinstance(data, AnnData):
+        return result
+    elif isinstance(data, MuData):
+        return MuData({"rna": data["rna"], "prot": result})
+
+
+def _get_protein_adata(data):
 
     if isinstance(data, AnnData):
-        if ("log1p" in data.uns) and log_transform:
-            warn("The protein data might already be log-transformed, consider using log_transform=False", stacklevel=2)
-
-        if n_neighbors is None:
-            n_cells = data.n_obs
-            n_neighbors = max(15, min(round(n_cells / 20), 300))
-
-        if calculate_neighbors_from == "prot":
-            neighbors = calculate_neighbors_from_protein(data, n_neighbors=n_neighbors, log_transform=log_transform)
-        elif calculate_neighbors_from == "use_existing_neighbors":
-            neighbors = data.obsp["connectivities"]
-        assert calculate_neighbors_from != "rna", (
-            "If an AnnData object with the protein data is provided, ``calculate_neighbors_from`` cannot be ``rna``. If calculate_neighbors_from = rna is desired, please provide a MuData object with the protein and the rna data."
-        )
-
-        if inplace:
-            _normalize_with_neighbors(
-                data,
-                neighbors,
-                log_transform=log_transform,
-                pseudocount=pseudocount,
-                max_iterations=max_iterations,
-                verbose=verbose,
-                save_size_factors=save_size_factors,
-                inplace=True,
-                mean=mean,
-                preserve_total_counts=preserve_total_counts,
-            )
-        else:
-            knn_normalized_protein = _normalize_with_neighbors(
-                data,
-                neighbors,
-                log_transform=log_transform,
-                pseudocount=pseudocount,
-                max_iterations=max_iterations,
-                verbose=verbose,
-                save_size_factors=save_size_factors,
-                inplace=False,
-                mean=mean,
-                preserve_total_counts=preserve_total_counts,
-            )
-            toreturn = knn_normalized_protein
-
+        return data
     elif isinstance(data, MuData):
-        assert "prot" in data.mod, (
-            "The MuData object does not have a modality called ``prot``, please add a modality called ``prot`` with the protein data."
-        )
+        if "prot" not in data.mod:
+            raise ValueError("The MuData object needs a modality called 'prot'.")
+        return data["prot"]
+    raise TypeError(f"Expected AnnData or MuData, got {type(data).__name__}.")
 
-        if ("log1p" in data["prot"].uns) and log_transform:
-            warn("The protein data might already be log-transformed, consider using log_transform=False.", stacklevel=2)
 
-        if n_neighbors is None:
-            n_cells = data.n_obs
-            n_neighbors = max(15, min(round(n_cells / 20), 300))
+def _get_neighbors(
+    data, protein, calculate_neighbors_from, n_neighbors, preprocess_rna, log_transform=True, verbose=True
+):
 
-        if calculate_neighbors_from == "prot":
-            neighbors = calculate_neighbors_from_protein(
-                data["prot"], n_neighbors=n_neighbors, log_transform=log_transform
-            )
-        elif calculate_neighbors_from == "rna":
-            assert "rna" in data.mod, (
-                "The MuData object does not have a modality called ``rna``, please add a modality called ``rna`` in order to calculate neighbors from the RNA data."
-            )
-            if verbose:
-                print("Calculating KNN graph from RNA data")
-            data_for_neighbors = data["rna"].copy()
-            if preprocess_rna:
-                sc.pp.normalize_total(data_for_neighbors)
-                sc.pp.log1p(data_for_neighbors)
-            sc.pp.pca(data_for_neighbors)
-            sc.pp.neighbors(data_for_neighbors, n_neighbors=n_neighbors)
-            neighbors = data_for_neighbors.obsp["connectivities"]
+    if calculate_neighbors_from == "prot":
+        neighbors = calculate_neighbors_from_protein(protein, n_neighbors, log_transform, verbose)
+    elif calculate_neighbors_from == "rna":
+        neighbors = calculate_neighbors_from_rna(data["rna"], n_neighbors, preprocess_rna, verbose)
+    elif calculate_neighbors_from == "use_existing_neighbors":
+        neighbors = protein.obsp["connectivities"]
 
-        elif calculate_neighbors_from == "use_existing_neighbors":
-            neighbors = data["prot"].obsp["connectivities"]
+    return neighbors
 
-        if inplace:
-            _normalize_with_neighbors(
-                data["prot"],
-                neighbors,
-                log_transform=log_transform,
-                pseudocount=pseudocount,
-                max_iterations=max_iterations,
-                verbose=verbose,
-                save_size_factors=save_size_factors,
-                inplace=True,
-                mean=mean,
-                preserve_total_counts=preserve_total_counts,
-            )
-        else:
-            knn_normalized_protein = _normalize_with_neighbors(
-                data["prot"],
-                neighbors,
-                log_transform=log_transform,
-                pseudocount=pseudocount,
-                max_iterations=max_iterations,
-                verbose=verbose,
-                save_size_factors=save_size_factors,
-                inplace=False,
-                mean=mean,
-                preserve_total_counts=preserve_total_counts,
-            )
-            new_mdata = MuData({"rna": data["rna"], "prot": knn_normalized_protein})
-            toreturn = new_mdata
 
-    return toreturn
+def _default_n_neighbors(n_cells):
+    return max(15, min(round(n_cells / 20), 300))
 
 
 def _normalize_with_neighbors(
-    protein_anndata,
-    connectivities,
+    protein_anndata: AnnData,
+    connectivities: csr_matrix,
     log_transform=True,
-    log_transform_before=False,
     save_size_factors=False,
     pseudocount=5,
     max_iterations=25,
     change_for_stop=0.0005,
     verbose=True,
     inplace: bool = True,
-    mean="average",
-    preserve_total_counts=True,
 ):
     """
     Apply KNN normalization given precomputed neighbors.
@@ -215,9 +164,6 @@ def _normalize_with_neighbors(
         ``.obsp["connectivities"]``.
     log_transform
         If ``True``, log-transforms the data after normalization.
-    log_transform_before
-        If ``True``, log-transforms the data before normalization.
-        Cannot be ``True`` at the same time as ``log_transform``.
     save_size_factors
         If ``True``, saves the final size factors to
         ``protein_anndata.obs["size_factor"]`` and the size factor history
@@ -233,11 +179,6 @@ def _normalize_with_neighbors(
         Whether to print progress messages.
     inplace
         Whether to update the AnnData object in place or return a copy.
-    mean
-        Type of mean to use: ``'average'``, ``'geom_mean'``, or
-        ``'trimmed_mean'``.
-    preserve_total_counts
-        Whether to preserve total counts across iterations.
 
     Returns
     -------
@@ -253,12 +194,8 @@ def _normalize_with_neighbors(
 
     # TODO: FUNCTIONS IN CASE THE DATA IS SPARSE.
 
-    x = protein_anndata.X
-    x += pseudocount  # To avoid zero-division, we add a pseudocount.
+    x = protein_anndata.X + pseudocount
 
-    assert not (log_transform_before and log_transform), "log_transform and log_transform_before cannot be both True"
-    if log_transform_before:
-        x = np.log(x)
     total_sums_before = x.sum()
 
     num_cells = x.shape[0]
@@ -279,23 +216,17 @@ def _normalize_with_neighbors(
             proto_size_factors = np.median(ratios, axis=1)
 
             # After having collected the ratios for between the neighbor cells and the target cell, we calculate the average of those ratios. That will be the cell-specific size factor.
-            if mean == "average":
-                size_factor = np.mean(proto_size_factors)
-            elif mean == "trimmed_mean":
-                size_factor = stats.trim_mean(proto_size_factors, 0.1)
-            else:
-                size_factor = stats.gmean(proto_size_factors)
-
+            size_factor = np.mean(proto_size_factors)
             size_factors[target_cell] = size_factor
 
         # Now, we multiply the protein expression of each cell by its cell-specific factor.
         x *= size_factors[:, None]
 
-        if preserve_total_counts:
-            total_sums_after_iteration = x.sum()
-            ratio_of_total_counts = total_sums_after_iteration / total_sums_before
-            x = x / ratio_of_total_counts
-            size_factors = size_factors / ratio_of_total_counts
+        # We preserve total counts, that is, the sum of all total counts is the same before and after normalization.
+        total_sums_after_iteration = x.sum()
+        ratio_of_total_counts = total_sums_after_iteration / total_sums_before
+        x = x / ratio_of_total_counts
+        size_factors = size_factors / ratio_of_total_counts
 
         # Save this iteration's size factors. This is done mainly to compare with the previous iteration for the stopping criterion.
         size_factor_history.append(size_factors)
@@ -303,7 +234,6 @@ def _normalize_with_neighbors(
             print("Iteration ", iteration + 1)
 
         # Unless it's the first iteration, check the algorithm stopping criterion: if all changes of size_factors are smaller than the "change_for_stop" value with respect to the previous iteration.
-
         if iteration > 0:
             biggest_size_factor_change = np.max(np.abs(size_factor_history[-1] - size_factor_history[-2]))
             if verbose:
@@ -315,12 +245,11 @@ def _normalize_with_neighbors(
         x = np.log(x)
 
     if save_size_factors:
-        total_size_factors = np.prod(
-            np.array(size_factor_history), axis=0
+        history = np.array(size_factor_history)
+        protein_anndata.obs["size_factor"] = history.prod(
+            axis=0
         )  # Multiplication of the size factors across all iterations.
-        protein_anndata.obs["size_factor"] = total_size_factors
-        size_factor_history = np.array(size_factor_history).T
-        protein_anndata.obsm["size_factor_history"] = size_factor_history
+        protein_anndata.obsm["size_factor_history"] = history.T
         protein_anndata.obsp["connectivities_KNN_normalization"] = connectivities
 
     protein_anndata.X = x

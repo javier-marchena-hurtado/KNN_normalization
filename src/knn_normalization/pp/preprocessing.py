@@ -1,31 +1,17 @@
 import scanpy as sc
+from anndata import AnnData
 
 # Below this number of proteins, neighbors are computed directly on the protein
 # data; at or above it, PCA is applied first.
 PCA_PROTEIN_THRESHOLD = 70
 
 
-def retrieve_neighbors(connectivities):
-    """
-    Convert the KNN graph into a dictionary mapping each cell to its neighbors.
-
-    Parameters
-    ----------
-    connectivities
-        KNN graph in the format of ``.obsp["connectivities"]``.
-
-    Returns
-    -------
-    dict
-        Dictionary mapping each cell index to a list of its neighbor indices.
-    """
-    row_indices, col_indices = connectivities.nonzero()
-
-    neighbors = {}
-    for src, tgt in zip(row_indices, col_indices, strict=True):
-        neighbors.setdefault(src, []).append(tgt)
-
-    return neighbors
+def _compute_pca_and_neighbors(adata: AnnData, n_neighbors: int, use_pca: bool, metric="euclidean"):
+    """Compute the PCA (if ``use_pca``) and KNN graph and return the KNN graph."""
+    if use_pca:
+        sc.pp.pca(adata)
+    sc.pp.neighbors(adata, n_neighbors=n_neighbors, use_rep="X_pca" if use_pca else "X", metric=metric)
+    return adata.obsp["connectivities"]
 
 
 def calculate_neighbors_from_protein(protein_data, n_neighbors, log_transform=True, verbose=True):
@@ -54,17 +40,11 @@ def calculate_neighbors_from_protein(protein_data, n_neighbors, log_transform=Tr
     if verbose:
         print("Calculating KNN graph from protein data")
 
-    adata = protein_data.copy()
+    protein = AnnData(protein_data.X.copy())
     if log_transform:
-        sc.pp.log1p(adata)
-
-    if adata.n_vars < PCA_PROTEIN_THRESHOLD:
-        sc.pp.neighbors(adata, use_rep="X", metric="cosine", n_neighbors=n_neighbors)
-    else:
-        sc.pp.pca(adata)
-        sc.pp.neighbors(adata, metric="cosine", n_neighbors=n_neighbors)
-
-    return adata.obsp["connectivities"]
+        sc.pp.log1p(protein)
+    use_pca = protein.n_vars >= PCA_PROTEIN_THRESHOLD
+    return _compute_pca_and_neighbors(protein, n_neighbors, use_pca=use_pca, metric="cosine")
 
 
 def calculate_neighbors_from_rna(rna_data, n_neighbors, preprocess=True, verbose=True):
@@ -74,16 +54,24 @@ def calculate_neighbors_from_rna(rna_data, n_neighbors, preprocess=True, verbose
     Parameters
     ----------
     rna_data
-        AnnData object with RNA data
+        AnnData object with RNA data. Expects raw counts if preprocess=True, and normalized if preprocess=False.
+    n_neighbors
+        Number of neighbors to use for the KNN graph.
+    preprocess
+        Whether to normalize and log-transform the RNA data before PCA and KNN calculation.
+    verbose
+        Whether to print progress messages.
+
+    Returns
+    -------
+    The KNN graph in scipy.sparse.csr_matrix format.
     """
-    data_for_neighbors = rna_data.copy()
     if verbose:
         print("Calculating KNN graph from RNA data")
 
+    rna = AnnData(rna_data.X.copy())
     if preprocess:
-        sc.pp.normalize_total(data_for_neighbors)
-        sc.pp.log1p(data_for_neighbors)
-    sc.pp.pca(data_for_neighbors)
-    sc.pp.neighbors(data_for_neighbors, n_neighbors=n_neighbors)
+        sc.pp.normalize_total(rna)
+        sc.pp.log1p(rna)
 
-    return data_for_neighbors.obsp["connectivities"]
+    return _compute_pca_and_neighbors(rna, n_neighbors, use_pca=True)

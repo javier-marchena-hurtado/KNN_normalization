@@ -1,1 +1,1 @@
-from .preprocessing import calculate_neighbors_from_protein, retrieve_neighbors
+from .preprocessing import calculate_neighbors_from_protein, calculate_neighbors_from_rna

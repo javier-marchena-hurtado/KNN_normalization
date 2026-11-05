@@ -47,7 +47,7 @@ def calculate_neighbors_from_protein(protein_data, n_neighbors, log_transform=Tr
     return _compute_pca_and_neighbors(protein, n_neighbors, use_pca=use_pca, metric="cosine")
 
 
-def calculate_neighbors_from_rna(rna_data, n_neighbors, preprocess=True, verbose=True):
+def calculate_neighbors_from_rna(rna_data, n_neighbors, verbose=True):
     """
     Calculate the KNN graph from the RNA data.
 
@@ -57,8 +57,6 @@ def calculate_neighbors_from_rna(rna_data, n_neighbors, preprocess=True, verbose
         AnnData object with RNA data. Expects raw counts if preprocess=True, and normalized if preprocess=False.
     n_neighbors
         Number of neighbors to use for the KNN graph.
-    preprocess
-        Whether to normalize and log-transform the RNA data before PCA and KNN calculation.
     verbose
         Whether to print progress messages.
 
@@ -70,8 +68,7 @@ def calculate_neighbors_from_rna(rna_data, n_neighbors, preprocess=True, verbose
         print("Calculating KNN graph from RNA data")
 
     rna = AnnData(rna_data.X.copy())
-    if preprocess:
-        sc.pp.normalize_total(rna)
-        sc.pp.log1p(rna)
+    sc.pp.normalize_total(rna)
+    sc.pp.log1p(rna)
 
     return _compute_pca_and_neighbors(rna, n_neighbors, use_pca=True)

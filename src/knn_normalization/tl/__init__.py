@@ -1,1 +1,1 @@
-from .tools import _normalize_with_neighbors, knn_normalize
+from .tools import knn_normalize, normalize_with_neighbors

@@ -2,27 +2,31 @@ from numbers import Integral, Real
 from warnings import warn
 
 import numpy as np
+import scanpy as sc
 from anndata import AnnData
 from mudata import MuData
 from scipy.sparse import csr_matrix, issparse
 
-from knn_normalization.pp.preprocessing import (
-    calculate_neighbors_from_protein,
-    calculate_neighbors_from_rna,
-)
+# Below this number of proteins, neighbors are computed directly on the protein
+# data; at or above it, PCA is applied first.
+PCA_PROTEIN_THRESHOLD = 70
 
 _NEIGHBOR_SOURCES = ("prot", "rna", "use_existing_neighbors")
 _N_CELLS_TO_CHECK = 100  # only the first cells are inspected when validating the values
 
 
-def _sample_values(x, n_cells=_N_CELLS_TO_CHECK):
-    """Return the stored values of the first ``n_cells`` rows of ``x`` (non-zeros only if sparse)."""
-    head = x[:n_cells]
-    return head.data if issparse(head) else np.asarray(head)
+def _check_positive_int(value, name):
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be a positive integer, got {value!r}.")
 
 
-def _check_values(values, name):
-    """Raise if ``values`` contain NaN, infinite or negative numbers; return True if integer-valued."""
+def _check_values(x, name):
+    """Check the first cells of ``x``: raise on NaN or infinite values, warn on negative values.
+
+    Returns True if all checked values are integers.
+    """
+    head = x[:_N_CELLS_TO_CHECK]
+    values = head.data if issparse(head) else np.asarray(head)  # sparse matrices only store their non-zeros
     if not np.isfinite(values).all():
         raise ValueError(f"The {name} data contains NaN or infinite values.")
     if values.size and values.min() < 0:
@@ -51,13 +55,8 @@ def _validate_inputs(
     _check_positive_int(max_iterations, "max_iterations")
     if n_neighbors is not None:
         _check_positive_int(n_neighbors, "n_neighbors")
-    if (
-        isinstance(pseudocount, bool)
-        or not isinstance(pseudocount, Real)
-        or not np.isfinite(pseudocount)
-        or pseudocount < 0
-    ):
-        raise ValueError(f"pseudocount must be a positive number or 0, got {pseudocount!r}.")
+    if isinstance(pseudocount, bool) or not isinstance(pseudocount, Real) or not 0 <= pseudocount < np.inf:
+        raise ValueError(f"pseudocount must be a finite number >= 0, got {pseudocount!r}.")
 
     # Check the structure of the input
     if isinstance(data, MuData) and "prot" not in data.mod:
@@ -95,7 +94,7 @@ def _validate_inputs(
             )
 
     # Check protein values (first cells only)
-    if not _check_values(_sample_values(protein.X), "protein"):
+    if not _check_values(protein.X, "protein"):
         warn("The protein data is not integer-valued. KNN normalization expects raw counts.", stacklevel=3)
     if log_transform and "log1p" in protein.uns:
         warn("The protein data might already be log-transformed, consider using log_transform=False", stacklevel=3)
@@ -107,7 +106,7 @@ def _validate_inputs(
         warn("protein.obs['size_factor'] already exists and will be overwritten.", stacklevel=3)
 
     # Check RNA values (first cells only)
-    if calculate_neighbors_from == "rna" and not _check_values(_sample_values(data["rna"].X), "RNA"):
+    if calculate_neighbors_from == "rna" and not _check_values(data["rna"].X, "RNA"):
         warn(
             "The RNA data is not integer-valued. KNN normalization expects raw RNA counts "
             "and will library-size normalize and log-transform them.",
@@ -115,29 +114,9 @@ def _validate_inputs(
         )
 
 
-def _check_positive_int(value, name):
-    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
-        raise ValueError(f"{name} must be a positive integer, got {value!r}.")
-
-
 def _get_protein_adata(data):
-    """
-    Get protein data from the AnnData or MuData input. Also check that the input data type is correct.
-
-    Parameters
-    ----------
-    data
-        AnnData or MuData object with the protein data.
-
-    Returns
-    -------
-    AnnData object with the protein data.
-    """
-    if isinstance(data, AnnData):
-        return data
-    if isinstance(data, MuData):
-        return data["prot"]
-    raise TypeError(f"Expected AnnData or MuData, got {type(data).__name__}.")
+    """Return the protein AnnData: the ``prot`` modality of a MuData, or the AnnData itself."""
+    return data["prot"] if isinstance(data, MuData) else data
 
 
 def _densify(x):
@@ -145,43 +124,41 @@ def _densify(x):
     return x.toarray().astype(float, copy=False) if issparse(x) else np.array(x, dtype=float)
 
 
-def _get_neighbors(data, protein, calculate_neighbors_from, n_neighbors, log_transform=True, verbose=True):
-    """
-    Get neighbors (KNN graph) from the desired data modality.
-
-    Parameters
-    ----------
-    data
-        AnnData or MuData object.
-    protein
-        AnnData object with the protein data.
-    calculate_neighbors_from
-        Calculate neighbors from protein, RNA or use existing neighbors.
-    n_neighbors
-        Number of neighbors for the KNN graph.
-    log_transform
-        Whether to log-transform the data.
-    verbose
-        Whether to print progress messages.
-
-    Returns
-    -------
-    The KNN graph in scipy.sparse.csr_matrix format.
-    """
-    if calculate_neighbors_from == "prot":
-        return calculate_neighbors_from_protein(protein, n_neighbors, log_transform, verbose)
-    if calculate_neighbors_from == "rna":
-        return calculate_neighbors_from_rna(data["rna"], n_neighbors, verbose)
-    if "connectivities" not in protein.obsp:
-        raise ValueError(
-            "calculate_neighbors_from='use_existing_neighbors' requires "
-            "protein.obsp['connectivities']. Run sc.pp.neighbors on the protein data first."
-        )
-    return protein.obsp["connectivities"]
-
-
 def _default_n_neighbors(n_cells):
     return max(15, min(round(n_cells / 20), 300))
+
+
+def _get_neighbors(data, protein, calculate_neighbors_from, n_neighbors, log_transform=True, verbose=True):
+    """
+    Get the KNN graph (sparse matrix of connectivities) from the protein or RNA data, or reuse the existing one.
+
+    For protein data, PCA is applied first if there are at least ``PCA_PROTEIN_THRESHOLD`` proteins, and the
+    cosine distance is used. RNA data is library-size normalized and log-transformed, and always uses PCA.
+    """
+    if calculate_neighbors_from == "use_existing_neighbors":
+        return protein.obsp["connectivities"]
+
+    if calculate_neighbors_from == "prot":
+        if verbose:
+            print("Calculating KNN graph from protein data")
+        adata = AnnData(protein.X.copy())
+        if log_transform:
+            sc.pp.log1p(adata)
+        use_pca = adata.n_vars >= PCA_PROTEIN_THRESHOLD
+        metric = "cosine"
+    else:
+        if verbose:
+            print("Calculating KNN graph from RNA data")
+        adata = AnnData(data["rna"].X.copy())
+        sc.pp.normalize_total(adata)
+        sc.pp.log1p(adata)
+        use_pca = True
+        metric = "euclidean"
+
+    if use_pca:
+        sc.pp.pca(adata)
+    sc.pp.neighbors(adata, n_neighbors=n_neighbors, use_rep="X_pca" if use_pca else "X", metric=metric)
+    return adata.obsp["connectivities"]
 
 
 def _neighbor_pairs(connectivities: csr_matrix):
@@ -197,13 +174,12 @@ def _neighbor_pairs(connectivities: csr_matrix):
     return target_cells, knn_graph.indices, neighbors_per_cell
 
 
-def _calculate_size_factors(x, target_cells, neighbor_cells, neighbors_per_cell, chunk_size=50_000):
+def _pairwise_median_ratios(x, target_cells, neighbor_cells, chunk_size=50_000):
     """
-    Calculate the size factor of each cell.
+    Median over proteins of ``neighbor / cell`` expression, for every (cell, neighbor) pair.
 
-    For every (cell, neighbor) pair, take the median over proteins of
-    ``neighbor / cell`` expression. A cell's size factor is the mean of
-    these medians over all of its neighbors.
+    This is the expensive step of the normalization. It only has to be computed once: afterwards the
+    ratios can be updated from the size factors alone (see ``normalize_with_neighbors``).
 
     Parameters
     ----------
@@ -213,32 +189,51 @@ def _calculate_size_factors(x, target_cells, neighbor_cells, neighbors_per_cell,
         For each (cell, neighbor) pair, the index of the target cell.
     neighbor_cells
         For each (cell, neighbor) pair, the index of the neighbor cell.
-    neighbors_per_cell
-        Number of neighbors of each cell in the KNN graph.
     chunk_size
         Number of (cell, neighbor) pairs processed at once, to bound memory use.
 
     Returns
     -------
-    np.array of size factors
+    np.array with one median ratio per (cell, neighbor) pair.
     """
-    n_cells = x.shape[0]
     n_pairs = len(target_cells)
     median_ratios = np.empty(n_pairs)
-
     for start in range(0, n_pairs, chunk_size):
         chunk = slice(start, start + chunk_size)
         ratios = x[neighbor_cells[chunk]] / x[target_cells[chunk]]
         median_ratios[chunk] = np.median(ratios, axis=1)
+    return median_ratios
 
-    ratio_sums = np.bincount(target_cells, weights=median_ratios, minlength=n_cells)
-    # Cells without neighbors keep a neutral size factor of 1.
-    size_factors = np.divide(
-        ratio_sums,
-        neighbors_per_cell,
-        out=np.ones(n_cells),
-        where=neighbors_per_cell > 0,
-    )
+
+def _size_factors_from_ratios(median_ratios, target_cells, neighbors_per_cell):
+    """
+    Calculate the size factor of each cell.
+
+    The size factor of a cell is the average of the median ratios of all of its neighbors. A cell
+    without neighbors gets a neutral size factor of 1.
+
+    Parameters
+    ----------
+    median_ratios
+        One median ratio per (cell, neighbor) pair.
+    target_cells
+        For each (cell, neighbor) pair, the index of the cell the pair belongs to.
+    neighbors_per_cell
+        Number of neighbors of each cell.
+
+    Returns
+    -------
+    np.array with one size factor per cell.
+    """
+    n_cells = len(neighbors_per_cell)
+    has_neighbors = neighbors_per_cell > 0
+
+    # Add up the median ratios of all pairs that belong to the same cell.
+    ratio_sum_per_cell = np.bincount(target_cells, weights=median_ratios, minlength=n_cells)
+
+    # Average them. Cells without neighbors keep the neutral value 1.
+    size_factors = np.ones(n_cells)
+    size_factors[has_neighbors] = ratio_sum_per_cell[has_neighbors] / neighbors_per_cell[has_neighbors]
     return size_factors
 
 

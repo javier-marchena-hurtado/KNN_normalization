@@ -1,14 +1,12 @@
 # API
 
-## Tools
-
+## Main function
 
 ```{eval-rst}
-.. module:: knn_normalization.tl
-.. currentmodule:: knn_normalization
+.. module:: knn_normalization
 
 .. autosummary::
     :toctree: generated
 
-    tl.knn_normalize
+    knn_normalize
 ```

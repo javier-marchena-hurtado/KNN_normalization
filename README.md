@@ -24,13 +24,13 @@ pip install KNN_normalization
 
 ```python
 import scanpy as sc
-import knn_normalization as knn
+from knn_normalization import knn_normalize
 
 # Load your CITE-seq data
 adata = sc.read_h5ad("path/to/your/data.h5ad")
 
 # Run KNN normalization (modifies adata in place)
-knn.tl.knn_normalize(adata)
+knn_normalize(adata)
 ```
 
 ## Documentation
@@ -63,7 +63,7 @@ If you found a bug, please use the [issue tracker][].
 [tests]: https://github.com/javier-marchena-hurtado/KNN_normalization/actions/workflows/test.yaml
 [documentation]: https://knn-normalization.readthedocs.io
 [changelog]: https://knn-normalization.readthedocs.io/en/latest/changelog.html
-[documentation of the knn_normalize() function]: https://knn-normalization.readthedocs.io/en/latest/generated/knn_normalization.tl.knn_normalize.html#knn_normalization.tl.knn_normalize
+[documentation of the knn_normalize() function]: https://knn-normalization.readthedocs.io/en/latest/generated/knn_normalization.knn_normalize.html#knn_normalization.knn_normalize
 [pypi]: https://pypi.org/project/KNN_normalization
 [discussion]: https://github.com/javier-marchena-hurtado/KNN_normalization/discussions
 [email]: mailto:javier.marchena.hurtado@gmail.com

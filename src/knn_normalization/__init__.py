@@ -1,7 +1,7 @@
 from importlib.metadata import version
 
-from . import pl, pp, tl
+from .knn_normalization import knn_normalize, normalize_with_neighbors
 
-__all__ = ["pl", "pp", "tl"]
+__all__ = ["knn_normalize", "normalize_with_neighbors"]
 
 __version__ = version("KNN_normalization")

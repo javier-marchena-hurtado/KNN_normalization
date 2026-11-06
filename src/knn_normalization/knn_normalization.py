@@ -7,14 +7,15 @@ from anndata import AnnData
 from mudata import MuData
 from scipy.sparse import csr_matrix
 
-from knn_normalization.tl._utils import (
-    _calculate_size_factors,
+from knn_normalization._utils import (
     _default_n_neighbors,
     _densify,
     _get_neighbors,
     _get_protein_adata,
     _neighbor_pairs,
+    _pairwise_median_ratios,
     _save_size_factors,
+    _size_factors_from_ratios,
     _validate_inputs,
 )
 
@@ -82,6 +83,7 @@ def knn_normalize(
     -----
     Counts must be stored in ``.X`` (not in layers or ``.raw``).
     """
+    # Raise an error (or warn) if the arguments or the data cannot be normalized.
     _validate_inputs(
         data,
         calculate_neighbors_from,
@@ -92,11 +94,13 @@ def knn_normalize(
         inplace,
         save_size_factors,
     )
+    # Work on a copy so that the input is left untouched.
     if not inplace:
         data = data.copy()
     protein = _get_protein_adata(data)
     if n_neighbors is None:
         n_neighbors = _default_n_neighbors(data.n_obs)
+    # KNN graph (sparse matrix of connectivities) that tells which cells are neighbors.
     neighbors = _get_neighbors(
         data,
         protein,
@@ -105,6 +109,7 @@ def knn_normalize(
         log_transform=log_transform,
         verbose=verbose,
     )
+    # Normalize the protein data using the neighbors. This writes the result to protein.X.
     normalize_with_neighbors(
         protein,
         neighbors,
@@ -154,21 +159,30 @@ def normalize_with_neighbors(
     verbose
         Whether to print progress messages.
     """
+    # Dense float copy of the protein data, so that the original data is not modified until the end.
     x = _densify(protein_anndata.X)
     x += pseudocount
-    total_counts_before = x.sum()
-    size_factor_history = []
+    total_counts = x.sum()
+    row_sums = x.sum(axis=1)
+    # Every (cell, neighbor) pair of the KNN graph: pair i is (target_cells[i], neighbor_cells[i]).
     target_cells, neighbor_cells, neighbors_per_cell = _neighbor_pairs(connectivities)
+    size_factor_history = []
+    cumulative_factors = np.ones(x.shape[0])  # Product of the size factors of all iterations until now.
 
     if verbose:
         print("Running KNN normalization")
 
+    # Median over proteins of neighbor / cell expression for every pair.
+    median_ratios = _pairwise_median_ratios(x, target_cells, neighbor_cells)
+
     for iteration in range(max_iterations):
-        size_factors = _calculate_size_factors(x, target_cells, neighbor_cells, neighbors_per_cell)
+        # Size factor of a cell = average of its median ratios over its neighbors.
+        size_factors = _size_factors_from_ratios(median_ratios, target_cells, neighbors_per_cell)
         # Rescale so that the total counts in the matrix stay constant.
-        size_factors /= (size_factors @ x.sum(axis=1)) / total_counts_before
-        x *= size_factors[:, None]
+        total_after_scaling = size_factors @ (row_sums * cumulative_factors)
+        size_factors *= total_counts / total_after_scaling
         size_factor_history.append(size_factors)
+        cumulative_factors *= size_factors
 
         if verbose:
             print(f"Iteration {iteration + 1}")
@@ -178,6 +192,14 @@ def normalize_with_neighbors(
                 print(f"Change wrt previous iteration: {change}")
             if change < change_for_stop:
                 break
+
+        # Update the median ratios for the next iteration: neighbor gets scaled by s_n, cell by s_c.
+        update = size_factors[neighbor_cells]
+        update /= size_factors[target_cells]
+        median_ratios *= update
+
+    # Apply the size factors of all iterations at once.
+    x *= cumulative_factors[:, None]
     if log_transform:
         np.log(x, out=x)
     if save_size_factors:

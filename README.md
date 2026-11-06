@@ -4,7 +4,7 @@
 [![Documentation][badge-docs]][documentation]
 
 [badge-tests]: https://img.shields.io/github/actions/workflow/status/javier-marchena-hurtado/KNN_normalization/test.yaml?branch=main
-[badge-docs]: https://img.shields.io/readthedocs/KNN_normalization
+[badge-docs]: https://img.shields.io/readthedocs/knn-normalization
 
 <img src="https://raw.githubusercontent.com/javier-marchena-hurtado/KNN_normalization/main/images/KNN_normalization_logo.png" width="250">
 

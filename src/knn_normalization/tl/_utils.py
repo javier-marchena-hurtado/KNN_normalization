@@ -26,7 +26,7 @@ def _check_values(values, name):
     if not np.isfinite(values).all():
         raise ValueError(f"The {name} data contains NaN or infinite values.")
     if values.size and values.min() < 0:
-        raise ValueError(f"The {name} data contains negative values; raw (non-negative) counts are expected.")
+        warn(f"The {name} data contains negative values; raw (non-negative) counts are expected.", stacklevel=3)
     return bool(np.all(values == np.round(values)))
 
 

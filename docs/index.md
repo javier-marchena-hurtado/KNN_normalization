@@ -3,7 +3,7 @@
 
 ## Development environment
 
-See [dev-environment.txt](dev-environment.txt) for the exact package versions used during development.
+See {download}`dev-environment.yml <dev-environment.yml>` for the exact package versions used during development.
 
 ```{toctree}
 :hidden: true
@@ -12,5 +12,5 @@ See [dev-environment.txt](dev-environment.txt) for the exact package versions us
 api.md
 changelog.md
 references.md
-notebooks/example
+notebooks/tutorial
 ```

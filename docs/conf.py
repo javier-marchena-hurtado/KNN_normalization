@@ -129,4 +129,5 @@ nitpick_ignore = [
     # you can add an exception to this list.
     #     ("py:class", "igraph.Graph"),
     ("py:class", "mudata._core.mudata.MuData"),
+    ("py:class", "anndata._core.anndata.AnnData"),
 ]

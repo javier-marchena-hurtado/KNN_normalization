@@ -1,0 +1,130 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\newcommand{\N}{\mathcal{N}}
+\newcommand{\median}{\operatorname{median}}
+
+\begin{document}
+
+\section*{Supplementary Note: The KNN normalization algorithm}
+
+KNN normalization estimates one size factor per cell for the protein data. The
+key idea is that a cell and its neighbors in a KNN graph have, by construction,
+a similar biological state, so the \emph{median} (over proteins) of the ratio
+between a neighbor's and the cell's expression is a robust estimate of the
+relative difference in sequencing depth between the two. Averaging this over
+all neighbors gives the size factor of the cell, and the procedure is iterated
+until the size factors converge.
+
+\paragraph{Notation.}
+Let $Y \in \mathbb{N}^{C \times P}$ be the raw protein count matrix of $C$ cells
+and $P$ proteins, and $y_{ci}$ its entries. The KNN graph defines for every cell
+$c$ a set of neighbors $\N(c)$ with $|\N(c)| = k_c$. Let $\pi$ be the
+pseudocount.
+
+\begin{algorithm}[h]
+\caption{KNN normalization (\texttt{knn\_normalize})}
+\begin{algorithmic}[1]
+\Require Raw protein counts $Y$ ($C \times P$); optionally RNA counts $Z$
+  ($C \times G$); source of the neighbors $\in \{\text{prot}, \text{rna},
+  \text{existing}\}$; number of neighbors $k$; pseudocount $\pi$; maximum
+  number of iterations $T_{\max}$; convergence threshold $\varepsilon$;
+  log-transform flag.
+\Ensure Normalized protein data $\tilde{X}$ ($C \times P$), and optionally the
+  size factors of every iteration.
+
+\Statex
+\Statex \textbf{Step 1: KNN graph}
+\If{$k$ is not given}
+  \State $k \gets \max\bigl(15,\ \min(\operatorname{round}(C/20),\ 300)\bigr)$
+\EndIf
+\If{source = existing}
+  \State Use the stored graph of connectivities.
+\Else
+  \If{source = prot}
+    \State $A \gets Y$, \textbf{if} log-transform \textbf{then} $A \gets \log(1 + A)$
+    \State Metric $\gets$ cosine; apply PCA \textbf{only if} $P \ge P_{\text{PCA}}$
+  \Else
+    \State $A \gets \log\bigl(1 + \text{library-size-normalize}(Z)\bigr)$
+    \State Metric $\gets$ Euclidean; apply PCA
+  \EndIf
+  \State Build the $k$-nearest-neighbor graph of the cells from $A$ (or from its
+    principal components) and keep its connectivities.
+\EndIf
+\State From the graph, form the list $\mathcal{E}$ of all (cell, neighbor) pairs
+  $(c, n)$ with $n \in \N(c)$, and the number of neighbors $k_c$ of every cell.
+
+\Statex
+\Statex \textbf{Step 2: Initialization}
+\State $x_{ci} \gets y_{ci} + \pi$ for all $c, i$
+\State $S_{\text{tot}} \gets \sum_{c,i} x_{ci}$, \quad
+  $\rho_c \gets \sum_{i} x_{ci}$
+\State $f_c \gets 1$ for all $c$ \Comment{cumulative size factor}
+\State $R_{cn} \gets \median_{i=1,\dots,P}\ \dfrac{x_{ni}}{x_{ci}}$
+  for all $(c,n) \in \mathcal{E}$
+  \Comment{computed only once}
+
+\Statex
+\Statex \textbf{Step 3: Iterative estimation of the size factors}
+\For{$t = 1, \dots, T_{\max}$}
+  \For{each cell $c$}
+    \If{$k_c > 0$}
+      \State $s_c \gets \dfrac{1}{k_c} \sum_{n \in \N(c)} R_{cn}$
+    \Else
+      \State $s_c \gets 1$
+    \EndIf
+  \EndFor
+  \State $s_c \gets s_c \cdot \dfrac{S_{\text{tot}}}{\sum_{c'} s_{c'}\, \rho_{c'}\, f_{c'}}$
+    for all $c$
+    \Comment{keep the total counts constant}
+  \State $s^{(t)} \gets s$; \quad $f_c \gets f_c \cdot s_c$ for all $c$
+  \If{$t > 1$ \textbf{and} $\max_c \bigl| s^{(t)}_c - s^{(t-1)}_c \bigr| < \varepsilon$}
+    \State \textbf{break}
+  \EndIf
+  \State $R_{cn} \gets R_{cn} \cdot \dfrac{s_n}{s_c}$ for all $(c,n) \in
+    \mathcal{E}$ \Comment{update ratios without recomputing medians}
+\EndFor
+
+\Statex
+\Statex \textbf{Step 4: Output}
+\State $\tilde{x}_{ci} \gets f_c \cdot x_{ci}$ for all $c, i$
+\If{log-transform}
+  \State $\tilde{x}_{ci} \gets \log \tilde{x}_{ci}$
+\EndIf
+\State \Return $\tilde{X}$ (and, if requested, $f_c$, $s^{(1)}, \dots, s^{(t)}$ and the graph)
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Details and default parameters.}
+\begin{itemize}
+  \item \textbf{Number of neighbors.} The default $k = \max(15, \min(\operatorname{round}(C/20), 300))$
+    scales with the number of cells, so that every cell has enough neighbors
+    for a stable average, while the neighborhood stays local in large data sets.
+  \item \textbf{Pseudocount.} The default is $\pi = 5$. It avoids divisions by
+    zero in $x_{ni}/x_{ci}$. If the data contains no zeros, $\pi = 0$ can be used.
+  \item \textbf{Median over proteins.} Using the median instead of the mean
+    makes the ratio $R_{cn}$ robust to the few proteins that truly differ
+    between a cell and its neighbor (biological variation), so that the ratio
+    reflects the difference in depth.
+  \item \textbf{Efficient update of the ratios.} After the size factors $s$ of an
+    iteration have been applied, the expression of cell $c$ becomes $s_c x_{ci}$
+    and that of its neighbor $s_n x_{ni}$. Since $s_c$ and $s_n$ are constant over
+    proteins, the new median ratio is exactly $R_{cn}\, s_n / s_c$. Therefore the
+    expensive median over proteins is computed only once (Step 2) and every
+    iteration only needs $O(|\mathcal{E}|)$ operations. All size factors are
+    applied to the data at once at the end, through the cumulative factor $f_c$.
+  \item \textbf{Rescaling.} After each iteration the size factors are rescaled so
+    that the total of the counts, $\sum_c s_c \rho_c f_c$, equals the original
+    total $S_{\text{tot}}$. This fixes the arbitrary global scale of the size
+    factors, which the median ratios alone do not determine.
+  \item \textbf{Convergence.} The iterations stop when the maximum absolute
+    change of any size factor between two consecutive iterations is below
+    $\varepsilon = 0.0005$, or after $T_{\max} = 25$ iterations.
+  \item \textbf{Cells without neighbors} receive the neutral size factor
+    $s_c = 1$.
+\end{itemize}
+
+\end{document}

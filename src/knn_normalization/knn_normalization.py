@@ -62,8 +62,7 @@ def knn_normalize(
         If you don't want to use pseudocounts, because you have no zeroes in the
         protein data, pass pseudocount=0.
     max_iterations
-        Maximum number of iterations. If KNN normalization takes long to run,
-        consider lowering the max_iterations to 10.
+        Maximum number of iterations.
     inplace
         Whether to update the object in place or return a copy.
     save_size_factors

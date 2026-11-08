@@ -1,3 +1,5 @@
+import os
+from concurrent.futures import ThreadPoolExecutor
 from numbers import Integral, Real
 from warnings import warn
 
@@ -174,12 +176,22 @@ def _neighbor_pairs(connectivities: csr_matrix):
     return target_cells, knn_graph.indices, neighbors_per_cell
 
 
-def _pairwise_median_ratios(x, target_cells, neighbor_cells, chunk_size=50_000):
+def _n_available_cpus():
+    """Number of CPUs that this process is allowed to use (this respects, for example, a SLURM allocation)."""
+    if hasattr(os, "sched_getaffinity"):  # Not available on macOS and Windows.
+        return len(os.sched_getaffinity(0))
+    return os.cpu_count()
+
+
+def _pairwise_median_ratios(x, target_cells, neighbor_cells, chunk_size=20_000):
     """
     Median over proteins of ``neighbor / cell`` expression, for every (cell, neighbor) pair.
 
     This is the expensive step of the normalization. It only has to be computed once: afterwards the
     ratios can be updated from the size factors alone (see ``normalize_with_neighbors``).
+
+    The pairs are split into chunks. The chunks do not depend on each other, so several chunks are processed
+    at the same time, each in its own thread, using all CPUs that are available.
 
     Parameters
     ----------
@@ -190,7 +202,8 @@ def _pairwise_median_ratios(x, target_cells, neighbor_cells, chunk_size=50_000):
     neighbor_cells
         For each (cell, neighbor) pair, the index of the neighbor cell.
     chunk_size
-        Number of (cell, neighbor) pairs processed at once, to bound memory use.
+        Number of (cell, neighbor) pairs in one chunk. Every thread holds one chunk in memory at a time,
+        so a smaller chunk size means less memory use.
 
     Returns
     -------
@@ -198,10 +211,16 @@ def _pairwise_median_ratios(x, target_cells, neighbor_cells, chunk_size=50_000):
     """
     n_pairs = len(target_cells)
     median_ratios = np.empty(n_pairs)
-    for start in range(0, n_pairs, chunk_size):
-        chunk = slice(start, start + chunk_size)
+
+    def fill_in_chunk(first_pair):
+        """Calculate the median ratios of one chunk of pairs and store them in ``median_ratios``."""
+        chunk = slice(first_pair, first_pair + chunk_size)
         ratios = x[neighbor_cells[chunk]] / x[target_cells[chunk]]
         median_ratios[chunk] = np.median(ratios, axis=1)
+
+    first_pair_of_each_chunk = range(0, n_pairs, chunk_size)
+    with ThreadPoolExecutor(max_workers=_n_available_cpus()) as executor:
+        list(executor.map(fill_in_chunk, first_pair_of_each_chunk))  # list() makes errors in a thread show up here
     return median_ratios
 
 

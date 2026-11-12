@@ -44,11 +44,11 @@ def knn_normalize(
     data
         MuData object with ``prot`` and ``rna`` modalities or
         AnnData object with protein expression counts. The function expects
-        raw counts.
+        as default count data (integers).
     calculate_neighbors_from
         Whether to calculate neighbors from protein or RNA modalities.
         ``"rna"`` requires a MuData with ``prot`` and ``rna`` modalities. The RNA data
-        in ``.X`` must be **raw counts**: they are library-size normalized and
+        in ``.X`` must be **count data**: they are library-size normalized and
         log-transformed internally. ``"prot"`` works for MuData and AnnData.
         ``"use_existing_neighbors"`` uses ``protein.obsp["connectivities"]``,
         which must exist and be a square graph over all cells.
@@ -59,8 +59,8 @@ def knn_normalize(
         Whether to log-transform the protein data.
     pseudocount
         Pseudocount to add before normalization to avoid zero-division errors.
-        If you don't want to use pseudocounts, because you have no zeroes in the
-        protein data, pass pseudocount=0.
+        If you have no zeroes in the protein data, you don't need to use pseudocounts,
+        in that case pass pseudocount=0.
     max_iterations
         Maximum number of iterations.
     inplace

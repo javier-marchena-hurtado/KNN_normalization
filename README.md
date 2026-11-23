@@ -12,6 +12,8 @@
 
 KNN normalization is a normalization method for protein counts in CITE-seq data. KNN normalization learns from neighbor cells in a KNN graph in order to estimate the appropriate total protein counts in each cell, accurately estimating total protein counts while preserving biological information.
 
+This is the **Python package** (based on [scanpy](https://scanpy.readthedocs.io)). If you work in R with [Seurat](https://satijalab.org/seurat/), use the **R package** [KNN.normalization](https://github.com/javier-marchena-hurtado/KNN_normalization_R) instead. For the same KNN graph, both packages give the same result.
+
 ## Installation
 
 Install the latest release of `KNN_normalization` from [PyPI][]:

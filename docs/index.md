@@ -9,8 +9,8 @@ See {download}`dev-environment.yml <dev-environment.yml>` for the exact package 
 :hidden: true
 :maxdepth: 1
 
+notebooks/tutorial
 api.md
 changelog.md
 references.md
-notebooks/tutorial
 ```

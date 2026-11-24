@@ -25,15 +25,16 @@ pip install KNN_normalization
 ## Basic usage
 
 ```python
-import scanpy as sc
+import mudata as md
 from knn_normalization import knn_normalize
 
-# Load your CITE-seq data
-adata = sc.read_h5ad("path/to/your/data.h5ad")
+# Load your CITE-seq MuData
+mdata = md.read_h5mu("path/to/your/mudata.h5mu")
 
 # Run KNN normalization (modifies adata in place)
-knn_normalize(adata)
+knn_normalize(mdata, calculate_neighbors_from="rna")
 ```
+For a full walkthrough (neighbors from RNA or protein, downstream analysis, your own KNN graph), see the [tutorial][].
 
 ## Documentation
 
@@ -64,6 +65,7 @@ If you found a bug, please use the [issue tracker][].
 [issue tracker]: https://github.com/javier-marchena-hurtado/KNN_normalization/issues
 [tests]: https://github.com/javier-marchena-hurtado/KNN_normalization/actions/workflows/test.yaml
 [documentation]: https://knn-normalization.readthedocs.io
+[tutorial]: https://knn-normalization.readthedocs.io/en/latest/notebooks/tutorial.html
 [changelog]: https://knn-normalization.readthedocs.io/en/latest/changelog.html
 [documentation of the knn_normalize() function]: https://knn-normalization.readthedocs.io/en/latest/generated/knn_normalization.knn_normalize.html#knn_normalization.knn_normalize
 [pypi]: https://pypi.org/project/KNN_normalization

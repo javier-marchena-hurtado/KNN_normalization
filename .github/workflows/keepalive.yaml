@@ -1,0 +1,24 @@
+# GitHub disables scheduled workflows after 60 days without repository activity.
+# This workflow re-enables the scheduled test workflow every month, which resets that countdown,
+# so that the periodic tests keep running even if nobody pushes for a long time.
+name: keepalive
+
+on:
+  schedule:
+    - cron: "0 6 10 * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-enable the scheduled workflows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh workflow enable test.yaml
+          gh workflow enable keepalive.yaml

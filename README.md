@@ -28,7 +28,7 @@ pip install KNN_normalization
 import mudata as md
 from knn_normalization import knn_normalize
 
-# Load your CITE-seq MuData
+# Load your CITE-seq MuData with a "prot" and an "rna" modality.
 mdata = md.read_h5mu("path/to/your/mudata.h5mu")
 
 # Run KNN normalization (modifies adata in place)
